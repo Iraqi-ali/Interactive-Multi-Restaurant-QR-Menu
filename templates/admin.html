@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}لوحة التحكم العامة - Super Admin{% endblock %}
+
+{% block content %}
+<div class="glass-card">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px;">
+        <h1 class="section-title" style="margin-bottom: 0;"><i class="fa-solid fa-user-shield" style="color: var(--accent-color);"></i> إدارة النظام العامة (Super Admin)</h1>
+        <div style="background: rgba(124, 77, 255, 0.15); border: 1px solid var(--accent-color); padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 14px;">
+            لوحة المدير العام
+        </div>
+    </div>
+    
+    <!-- Stats Row -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <i class="fa-solid fa-store stat-icon"></i>
+            <div class="stat-value">{{ restaurants|length }}</div>
+            <div class="stat-label">المطاعم المسجلة</div>
+        </div>
+        <div class="stat-card">
+            <i class="fa-solid fa-check-circle stat-icon" style="background: linear-gradient(135deg, #00e676 0%, #00b0ff 100%); -webkit-background-clip: text;"></i>
+            <div class="stat-value">
+                {% set active_count = namespace(value=0) %}
+                {% for r in restaurants %}
+                    {% if r.status == 'active' %}
+                        {% set active_count.value = active_count.value + 1 %}
+                    {% endif %}
+                {% endfor %}
+                {{ active_count.value }}
+            </div>
+            <div class="stat-label">المطاعم النشطة</div>
+        </div>
+        <div class="stat-card">
+            <i class="fa-solid fa-hourglass-half stat-icon" style="background: linear-gradient(135deg, #ff9100 0%, #ff3d00 100%); -webkit-background-clip: text;"></i>
+            <div class="stat-value">{{ restaurants|length - active_count.value }}</div>
+            <div class="stat-label">المطاعم المعطلة</div>
+        </div>
+    </div>
+    
+    <h2 class="section-title" style="font-size: 20px; margin-top: 30px;"><i class="fa-solid fa-list"></i> قائمة المطاعم المسجلة في المنصة</h2>
+    
+    <div style="overflow-x: auto; margin-top: 15px;">
+        <table class="admin-table">
+            <thead>
+                <tr>
+                    <th>اسم المطعم</th>
+                    <th>اسم المستخدم</th>
+                    <th>رابط المنيو (Slug)</th>
+                    <th>الحالة</th>
+                    <th>الإجراءات</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in restaurants %}
+                <tr>
+                    <td style="font-weight: bold; display: flex; align-items: center; gap: 10px;">
+                        {% if r.logo %}
+                            <img src="{{ url_for('static', filename='uploads/' + r.logo) }}" alt="Logo" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--glass-border);">
+                        {% else %}
+                            <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--bg-secondary); border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; font-size: 14px;">🍽️</div>
+                        {% endif %}
+                        {{ r.name }}
+                    </td>
+                    <td>{{ r.username }}</td>
+                    <td>
+                        <a href="/r/{{ r.slug }}" target="_blank" style="color: var(--accent-color); text-decoration: none; font-family: monospace;">
+                            /r/{{ r.slug }} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i>
+                        </a>
+                    </td>
+                    <td>
+                        {% if r.status == 'active' %}
+                            <span class="status-badge status-active">نشط</span>
+                        {% else %}
+                            <span class="status-badge status-inactive">معطل</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 8px;">
+                            {% if r.status == 'active' %}
+                                <form action="/admin/toggle-status/{{ r.id }}" method="POST" style="display: inline;">
+                                    <button type="submit" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; font-weight: normal;"><i class="fa-solid fa-ban"></i> تعطيل</button>
+                                </form>
+                            {% else %}
+                                <form action="/admin/toggle-status/{{ r.id }}" method="POST" style="display: inline;">
+                                    <button type="submit" class="btn btn-success" style="padding: 6px 12px; font-size: 12px; font-weight: normal;"><i class="fa-solid fa-check"></i> تفعيل</button>
+                                </form>
+                            {% endif %}
+                            
+                            <form action="/admin/delete-restaurant/{{ r.id }}" method="POST" style="display: inline;" onsubmit="return confirm('هل أنت متأكد من حذف هذا المطعم نهائياً؟ سيتم حذف جميع الأطعمة والطلبات والطاولات التابعة له ولا يمكن التراجع عن هذا الإجراء!')">
+                                <button type="submit" class="btn btn-danger" style="padding: 6px 12px; font-size: 12px; font-weight: normal;"><i class="fa-solid fa-trash"></i> حذف</button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 30px;">
+                        لا توجد مطاعم مسجلة حالياً في النظام.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

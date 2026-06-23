@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}قائمة الطعام الذكية{% endblock %}</title>
+    <!-- Google Fonts: Tajawal & Cairo -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Tajawal:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Custom Style Sheet -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <div class="glass-bg-container">
+        <div class="circle circle-1"></div>
+        <div class="circle circle-2"></div>
+        <div class="circle circle-3"></div>
+    </div>
+    
+    <header class="main-header">
+        <div class="header-container">
+            <a href="/" class="logo">
+                <i class="fa-solid fa-utensils logo-icon"></i>
+                <span class="logo-text">كيوآر <span class="logo-highlight">منيو</span></span>
+            </a>
+            
+            <nav class="nav-links">
+                {% if session.get('user_id') %}
+                    {% if session.get('role') == 'admin' %}
+                        <a href="/admin" class="nav-link"><i class="fa-solid fa-user-shield"></i> لوحة الأدمن</a>
+                    {% else %}
+                        <a href="/dashboard" class="nav-link"><i class="fa-solid fa-chart-line"></i> لوحة التحكم</a>
+                    {% endif %}
+                    <a href="/logout" class="nav-link logout-btn"><i class="fa-solid fa-right-from-bracket"></i> خروج</a>
+                {% else %}
+                    <a href="/#login" class="nav-link"><i class="fa-solid fa-right-to-bracket"></i> دخول</a>
+                    <a href="/#register" class="nav-link btn-primary-nav">ابدأ الآن</a>
+                {% endif %}
+            </nav>
+        </div>
+    </header>
+    
+    <main class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="flash-messages">
+                    {% for category, message in messages %}
+                        <div class="flash-message {{ category }}">
+                            <span class="flash-text">{{ message }}</span>
+                            <button class="flash-close" onclick="this.parentElement.remove()">&times;</button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="main-footer">
+        <p>&copy; 2026 كيوآر منيو. جميع الحقوق محفوظة لـ Antigravity.</p>
+    </footer>
+
+    {% block extra_js %}{% endblock %}
+    <script>
+        // Auto-dismiss flash messages after 4 seconds
+        setTimeout(() => {
+            const flashes = document.querySelectorAll('.flash-message');
+            flashes.forEach(flash => {
+                flash.style.opacity = '0';
+                flash.style.transform = 'translateY(-20px)';
+                setTimeout(() => flash.remove(), 500);
+            });
+        }, 4000);
+    </script>
+</body>
+</html>

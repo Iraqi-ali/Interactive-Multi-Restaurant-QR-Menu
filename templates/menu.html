@@ -1,0 +1,546 @@
+{% extends 'base.html' %}
+
+{% block title %}المنيو - {{ restaurant.name }} - طاولة {{ table.table_number }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Customize layout for customer view (hiding main header/footer since it's mobile-first) */
+    .main-header, .main-footer {
+        display: none !important;
+    }
+    body {
+        padding-top: 15px;
+    }
+    .main-content {
+        padding: 0 15px 100px 15px !important;
+    }
+    
+    /* Toast Notification styles */
+    .toast {
+        position: fixed;
+        bottom: 100px;
+        left: 50%;
+        transform: translateX(-50%) translateY(50px);
+        background: rgba(124, 77, 255, 0.95);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 30px;
+        font-size: 14px;
+        font-weight: bold;
+        z-index: 1000;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        opacity: 0;
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        pointer-events: none;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .toast.show {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+    
+    /* Order status modal tracker stepper */
+    .stepper {
+        display: flex;
+        justify-content: space-between;
+        margin: 25px 0 15px 0;
+        position: relative;
+    }
+    .stepper::before {
+        content: '';
+        position: absolute;
+        top: 15px;
+        left: 0;
+        width: 100%;
+        height: 3px;
+        background: rgba(255,255,255,0.1);
+        z-index: 1;
+    }
+    .step-progress-bar {
+        position: absolute;
+        top: 15px;
+        right: 0;
+        width: 0%;
+        height: 3px;
+        background: var(--success-color);
+        z-index: 2;
+        transition: width 0.5s ease;
+    }
+    .step {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #1e1e35;
+        border: 2px solid var(--glass-border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        z-index: 3;
+        transition: var(--transition);
+        position: relative;
+    }
+    .step.active {
+        background: var(--accent-color);
+        border-color: var(--accent-color);
+        box-shadow: 0 0 10px var(--accent-color);
+    }
+    .step.completed {
+        background: var(--success-color);
+        border-color: var(--success-color);
+        color: #0b0b14;
+    }
+    .step-label {
+        position: absolute;
+        top: 38px;
+        font-size: 9px;
+        white-space: nowrap;
+        color: var(--text-secondary);
+    }
+    .step.active .step-label, .step.completed .step-label {
+        color: var(--text-primary);
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="customer-menu-layout">
+    
+    <!-- Restaurant Header Details -->
+    <div class="restaurant-profile-header">
+        {% if restaurant.logo %}
+            <img src="{{ url_for('static', filename='uploads/' + restaurant.logo) }}" alt="Logo" class="restaurant-logo-circle">
+        {% else %}
+            <div class="restaurant-logo-circle" style="background: var(--bg-secondary); display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 12px auto;">🍽️</div>
+        {% endif %}
+        <h1>{{ restaurant.name }}</h1>
+        <div class="table-badge-indicator">
+            <i class="fa-solid fa-chair"></i> طاولة رقم {{ table.table_number }}
+        </div>
+    </div>
+    
+    <!-- Quick Actions (Call waiter, Request bill) -->
+    <div class="customer-quick-actions">
+        <button class="btn btn-secondary" onclick="sendWaiterCall('waiter')">
+            <i class="fa-solid fa-bell"></i> استدعاء النادل
+        </button>
+        <button class="btn btn-secondary" onclick="sendWaiterCall('bill')">
+            <i class="fa-solid fa-receipt"></i> طلب الفاتورة
+        </button>
+    </div>
+    
+    <!-- Horizontal Categories Slider -->
+    <div class="category-slider">
+        <button class="category-slider-btn active" onclick="filterCategory('all', this)">الكل</button>
+        {% for cat in categories %}
+        <button class="category-slider-btn" onclick="filterCategory('cat-{{ cat.id }}', this)">{{ cat.name }}</button>
+        {% endfor %}
+    </div>
+    
+    <!-- Menu items list -->
+    <div class="customer-items-list-container">
+        {% for item in menu_items %}
+        <div class="customer-item-card menu-item-row-cat cat-{{ item.category_id }}" id="item-card-{{ item.id }}">
+            <div class="customer-item-info">
+                <div class="customer-item-title">{{ item.name }}</div>
+                <p class="customer-item-desc">{{ item.description or 'لا يوجد وصف.' }}</p>
+                <div class="customer-item-price-row">
+                    <span class="customer-item-price">{{ item.price }} ر.س</span>
+                    
+                    {% if item.available == 1 %}
+                        <div class="qty-controls" id="controls-{{ item.id }}">
+                            <button class="qty-btn" onclick="addToCart({{ item.id }}, '{{ item.name }}', {{ item.price }}, -1)">-</button>
+                            <span class="qty-val" id="qty-{{ item.id }}">0</span>
+                            <button class="qty-btn" onclick="addToCart({{ item.id }}, '{{ item.name }}', {{ item.price }}, 1)">+</button>
+                        </div>
+                    {% else %}
+                        <span style="color: var(--danger-color); font-size: 12px; font-weight: bold;"><i class="fa-solid fa-ban"></i> غير متوفر</span>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="customer-item-img-container">
+                {% if item.image_path %}
+                    <img src="{{ url_for('static', filename='uploads/' + item.image_path) }}" alt="{{ item.name }}">
+                {% else %}
+                    <div class="customer-item-no-image-mini">🍔</div>
+                {% endif %}
+            </div>
+        </div>
+        {% else %}
+        <div class="glass-card" style="text-align: center; color: var(--text-secondary); padding: 40px;">
+            لا توجد وجبات مضافة في المنيو حالياً.
+        </div>
+        {% endfor %}
+    </div>
+    
+</div>
+
+<!-- Floating Cart Footer -->
+<div class="floating-cart-footer" id="floating-cart" style="display: none;">
+    <div class="floating-cart-container">
+        <div class="cart-summary-text" onclick="openCartModal()">
+            <span class="cart-items-count" id="cart-count">0 وجبات</span>
+            <span class="cart-total-amount" id="cart-total">0.00 ر.س</span>
+        </div>
+        <button class="btn btn-primary" onclick="openCartModal()">
+            <i class="fa-solid fa-basket-shopping"></i> عرض السلة والطلب
+        </button>
+    </div>
+</div>
+
+<!-- CART MODAL -->
+<div id="cart-modal" class="modal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal('cart-modal')">&times;</button>
+        <h3 class="modal-title"><i class="fa-solid fa-cart-shopping"></i> سلة طلباتك</h3>
+        
+        <div class="modal-body">
+            <div id="cart-items-details" style="max-height: 250px; overflow-y: auto; margin-bottom: 20px;">
+                <!-- Dynamically filled by JS -->
+            </div>
+            <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 18px; border-top: 1px solid var(--glass-border); padding-top: 15px;">
+                <span>الإجمالي</span>
+                <span id="modal-cart-total" style="color: var(--success-color);">0.00 ر.س</span>
+            </div>
+            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 10px; text-align: center;">
+                <i class="fa-solid fa-circle-info"></i> الدفع كاش أو شبكة عند الطاولة بعد استلام وجبتك.
+            </div>
+        </div>
+        
+        <button class="btn btn-primary" style="width: 100%;" onclick="submitOrder()">
+            <i class="fa-solid fa-paper-plane"></i> إرسال الطلب للمطبخ
+        </button>
+    </div>
+</div>
+
+<!-- ACTIVE ORDER TRACKER MODAL -->
+<div id="tracker-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 400px; text-align: center;">
+        <h3 class="modal-title"><i class="fa-solid fa-spinner fa-spin" style="color: var(--accent-color);"></i> تتبع طلبك</h3>
+        <div class="modal-body">
+            <p style="color: var(--text-secondary); font-size: 14px;">تم إرسال طلبك رقم <span id="tracker-order-id" style="color: var(--accent-color); font-weight: bold;">#0</span> إلى المطبخ بنجاح!</p>
+            
+            <div class="stepper">
+                <div class="step-progress-bar" id="stepper-progress"></div>
+                
+                <div class="step" id="step-pending">
+                    1 <span class="step-label">قيد الانتظار</span>
+                </div>
+                <div class="step" id="step-preparing">
+                    2 <span class="step-label">يتم التحضير</span>
+                </div>
+                <div class="step" id="step-completed">
+                    3 <span class="step-label">جاهز للتقديم</span>
+                </div>
+            </div>
+            
+            <div id="tracker-status-description" style="font-weight: bold; font-size: 16px; margin-top: 25px; margin-bottom: 20px;">
+                ⏳ ننتظر موافقة المطبخ...
+            </div>
+        </div>
+        <button class="btn btn-secondary" style="width: 100%;" onclick="closeTrackerModal()"><i class="fa-solid fa-circle-xmark"></i> إغلاق شاشة التتبع</button>
+    </div>
+</div>
+
+<!-- Toast notification box -->
+<div id="toast" class="toast">
+    <i class="fa-solid fa-circle-check"></i>
+    <span id="toast-text">تم إرسال الطلب بنجاح!</span>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Cart Global State
+    let cart = {};
+    const restaurantId = {{ restaurant.id }};
+    const tableId = {{ table.id }};
+    const tableToken = '{{ table.token }}';
+    
+    // Load cart from LocalStorage on load
+    window.addEventListener('DOMContentLoaded', () => {
+        const savedCart = localStorage.getItem(`cart_${restaurantId}_${tableId}`);
+        if (savedCart) {
+            cart = JSON.parse(savedCart);
+            updateUI();
+        }
+        
+        // Check if there is an active order being tracked
+        const trackedOrderId = localStorage.getItem(`tracked_order_${restaurantId}_${tableId}`);
+        if (trackedOrderId) {
+            startTrackingOrder(trackedOrderId);
+        }
+    });
+    
+    // Categories filtering
+    function filterCategory(catClass, btn) {
+        document.querySelectorAll('.category-slider-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        if (catClass === 'all') {
+            document.querySelectorAll('.menu-item-row-cat').forEach(r => r.style.display = 'grid');
+        } else {
+            document.querySelectorAll('.menu-item-row-cat').forEach(r => {
+                if (r.classList.contains(catClass)) {
+                    r.style.display = 'grid';
+                } else {
+                    r.style.display = 'none';
+                }
+            });
+        }
+    }
+    
+    // Add to Cart
+    function addToCart(id, name, price, qtyChange) {
+        if (!cart[id]) {
+            cart[id] = { id: id, name: name, price: price, quantity: 0 };
+        }
+        
+        cart[id].quantity += qtyChange;
+        
+        if (cart[id].quantity <= 0) {
+            delete cart[id];
+        }
+        
+        localStorage.setItem(`cart_${restaurantId}_${tableId}`, JSON.stringify(cart));
+        updateUI();
+    }
+    
+    // Update Cart UI
+    function updateUI() {
+        let totalItems = 0;
+        let totalPrice = 0;
+        
+        // Reset all item inputs
+        document.querySelectorAll('.qty-val').forEach(span => span.innerText = '0');
+        
+        Object.values(cart).forEach(item => {
+            totalItems += item.quantity;
+            totalPrice += item.price * item.quantity;
+            
+            const span = document.getElementById(`qty-${item.id}`);
+            if (span) span.innerText = item.quantity;
+        });
+        
+        // Update floating cart footer
+        const cartFooter = document.getElementById('floating-cart');
+        if (totalItems > 0) {
+            cartFooter.style.display = 'block';
+            document.getElementById('cart-count').innerText = `${totalItems} وجبات`;
+            document.getElementById('cart-total').innerText = `${totalPrice.toFixed(2)} ر.س`;
+        } else {
+            cartFooter.style.display = 'none';
+        }
+    }
+    
+    // Open Cart Modal
+    function openCartModal() {
+        const modal = document.getElementById('cart-modal');
+        const container = document.getElementById('cart-items-details');
+        
+        let html = '';
+        let totalPrice = 0;
+        
+        const items = Object.values(cart);
+        if (items.length === 0) {
+            container.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">سلتك فارغة حالياً.</p>';
+            return;
+        }
+        
+        items.forEach(item => {
+            const itemTotal = item.price * item.quantity;
+            totalPrice += itemTotal;
+            
+            html += `
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px 15px; border-radius: 8px;">
+                    <div>
+                        <div style="font-weight: bold; font-size: 14px;">${item.name}</div>
+                        <div style="font-size: 11px; color: var(--success-color); margin-top: 4px;">${item.price.toFixed(2)} ر.س</div>
+                    </div>
+                    <div class="qty-controls">
+                        <button class="qty-btn" onclick="adjustModalItem(${item.id}, -1)">-</button>
+                        <span class="qty-val">${item.quantity}</span>
+                        <button class="qty-btn" onclick="adjustModalItem(${item.id}, 1)">+</button>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+        document.getElementById('modal-cart-total').innerText = `${totalPrice.toFixed(2)} ر.س`;
+        modal.style.display = 'flex';
+    }
+    
+    function adjustModalItem(id, change) {
+        const name = cart[id].name;
+        const price = cart[id].price;
+        addToCart(id, name, price, change);
+        openCartModal(); // Refresh modal view
+    }
+    
+    function closeModal(id) {
+        document.getElementById(id).style.display = 'none';
+    }
+    
+    // Submit Order
+    async function submitOrder() {
+        const items = Object.values(cart);
+        if (items.length === 0) return;
+        
+        const orderData = {
+            restaurant_id: restaurantId,
+            table_id: tableId,
+            token: tableToken,
+            items: items.map(item => ({
+                menu_item_id: item.id,
+                quantity: item.quantity,
+                price: item.price
+            }))
+        };
+        
+        try {
+            const response = await fetch('/api/order/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(orderData)
+            });
+            
+            const result = await response.json();
+            if (response.ok) {
+                // Clear cart
+                cart = {};
+                localStorage.removeItem(`cart_${restaurantId}_${tableId}`);
+                updateUI();
+                closeModal('cart-modal');
+                
+                // Show tracking modal and save order id to track
+                localStorage.setItem(`tracked_order_${restaurantId}_${tableId}`, result.order_id);
+                startTrackingOrder(result.order_id);
+            } else {
+                alert('خطأ في إرسال الطلب: ' + result.error);
+            }
+        } catch (e) {
+            console.error("Order error:", e);
+            alert('حدث خطأ في الاتصال بالخادم، يرجى المحاولة مرة أخرى.');
+        }
+    }
+    
+    // Order Tracking Logic
+    let trackingInterval = null;
+    
+    function startTrackingOrder(orderId) {
+        document.getElementById('tracker-order-id').innerText = `#${orderId}`;
+        document.getElementById('tracker-modal').style.display = 'flex';
+        
+        trackOrderAPI(orderId);
+        
+        if (trackingInterval) clearInterval(trackingInterval);
+        trackingInterval = setInterval(() => trackOrderAPI(orderId), 4000);
+    }
+    
+    async function trackOrderAPI(orderId) {
+        try {
+            const res = await fetch(`/api/order/status/${orderId}`);
+            const data = await res.json();
+            
+            if (!res.ok) {
+                stopTracking();
+                return;
+            }
+            
+            updateTrackerUI(data.status);
+            
+            // If completed or cancelled, stop polling
+            if (data.status === 'completed' || data.status === 'cancelled') {
+                stopTracking();
+            }
+        } catch (e) {
+            console.error("Error tracking order:", e);
+        }
+    }
+    
+    function updateTrackerUI(status) {
+        const stepPending = document.getElementById('step-pending');
+        const stepPreparing = document.getElementById('step-preparing');
+        const stepCompleted = document.getElementById('step-completed');
+        const progressBar = document.getElementById('stepper-progress');
+        const desc = document.getElementById('tracker-status-description');
+        
+        // Reset classes
+        stepPending.className = 'step';
+        stepPreparing.className = 'step';
+        stepCompleted.className = 'step';
+        
+        if (status === 'pending') {
+            stepPending.classList.add('active');
+            progressBar.style.width = '0%';
+            desc.innerHTML = '⏳ ننتظر موافقة المطبخ وبدء التجهيز...';
+        } else if (status === 'preparing') {
+            stepPending.classList.add('completed');
+            stepPreparing.classList.add('active');
+            progressBar.style.width = '50%';
+            desc.innerHTML = '🍳 يتم طهي وتجهيز وجبتك الآن!';
+        } else if (status === 'completed') {
+            stepPending.classList.add('completed');
+            stepPreparing.classList.add('completed');
+            stepCompleted.classList.add('completed');
+            progressBar.style.width = '100%';
+            desc.innerHTML = '🍽️ الوجبة جاهزة وتقدم إليك الآن! بالعافية 🥰';
+            // Clear tracking from localstorage since it's completed
+            localStorage.removeItem(`tracked_order_${restaurantId}_${tableId}`);
+        } else if (status === 'cancelled') {
+            desc.innerHTML = '❌ نعتذر منك، تم إلغاء الطلب من قبل المطبخ.';
+            localStorage.removeItem(`tracked_order_${restaurantId}_${tableId}`);
+        }
+    }
+    
+    function stopTracking() {
+        if (trackingInterval) {
+            clearInterval(trackingInterval);
+            trackingInterval = null;
+        }
+    }
+    
+    function closeTrackerModal() {
+        document.getElementById('tracker-modal').style.display = 'none';
+        stopTracking();
+    }
+    
+    // Send Waiter / Bill call
+    async function sendWaiterCall(type) {
+        try {
+            const res = await fetch('/api/waiter-call/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    restaurant_id: restaurantId,
+                    table_id: tableId,
+                    token: tableToken,
+                    type: type
+                })
+            });
+            
+            if (res.ok) {
+                showToast(type === 'waiter' ? 'تم استدعاء النادل بنجاح!' : 'تم طلب الفاتورة بنجاح!');
+            }
+        } catch (e) {
+            console.error("Waiter call error:", e);
+        }
+    }
+    
+    // Toast Alert system
+    function showToast(text) {
+        const toast = document.getElementById('toast');
+        document.getElementById('toast-text').innerText = text;
+        toast.classList.add('show');
+        
+        setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
+</script>
+{% endblock %}

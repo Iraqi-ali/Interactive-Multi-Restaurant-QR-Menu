@@ -1,0 +1,569 @@
+{% extends 'base.html' %}
+
+{% block title %}لوحة التحكم - {{ restaurant.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Custom audio sound helper status indicator */
+    .audio-test-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid var(--glass-border);
+        color: var(--text-secondary);
+        font-size: 12px;
+        padding: 5px 12px;
+        border-radius: 20px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: var(--transition);
+    }
+    .audio-test-btn:hover {
+        background: rgba(124, 77, 255, 0.1);
+        color: var(--text-primary);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="glass-card" style="padding: 20px 30px; margin-bottom: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+        <div style="display: flex; align-items: center; gap: 15px;">
+            {% if restaurant.logo %}
+                <img src="{{ url_for('static', filename='uploads/' + restaurant.logo) }}" alt="Logo" style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent-color);">
+            {% else %}
+                <div style="width: 55px; height: 55px; border-radius: 50%; background: var(--bg-secondary); border: 2px solid var(--accent-color); display: flex; align-items: center; justify-content: center; font-size: 24px;">🍽️</div>
+            {% endif %}
+            <div>
+                <h1 style="font-family: var(--font-heading); font-size: 22px; font-weight: 700; margin: 0;">{{ restaurant.name }}</h1>
+                <a href="/r/{{ restaurant.slug }}" target="_blank" style="color: var(--text-secondary); font-size: 13px; text-decoration: none; display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                    <i class="fa-solid fa-link"></i> رابط منيو الزبائن: <span style="color: var(--accent-color); font-family: monospace;">/r/{{ restaurant.slug }}</span> <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i>
+                </a>
+            </div>
+        </div>
+        
+        <div style="display: flex; align-items: center; gap: 10px;">
+            <button class="audio-test-btn" onclick="playChime()"><i class="fa-solid fa-volume-high"></i> تجربة جرس التنبيه</button>
+            <span style="font-size: 13px; color: var(--success-color); display: flex; align-items: center; gap: 6px;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--success-color); animation: pulse 1.5s infinite; display: inline-block;"></span>
+                النظام متصل وتلقائي التحديث
+            </span>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-layout">
+    <!-- Sidebar Navigation -->
+    <div class="glass-card" style="padding: 20px 15px;">
+        <div class="sidebar-menu">
+            <button class="sidebar-btn active" onclick="switchPanel('orders-panel', this)">
+                <i class="fa-solid fa-bell"></i> الطلبات الحية
+            </button>
+            <button class="sidebar-btn" onclick="switchPanel('menu-panel', this)">
+                <i class="fa-solid fa-burger"></i> إدارة المنيو
+            </button>
+            <button class="sidebar-btn" onclick="switchPanel('tables-panel', this)">
+                <i class="fa-solid fa-qrcode"></i> إدارة الطاولات
+            </button>
+        </div>
+    </div>
+    
+    <!-- Main Dashboard Panels -->
+    <div class="dashboard-content">
+        
+        <!-- PANEL 1: LIVE ORDERS -->
+        <div id="orders-panel" class="dashboard-panel active">
+            <div class="orders-feed-container">
+                <div>
+                    <h2 class="section-title"><i class="fa-solid fa-receipt"></i> الطلبات الحالية للزبائن</h2>
+                    <div id="orders-container" class="orders-list">
+                        <!-- Loaded dynamically via JavaScript -->
+                        <div class="glass-card" style="text-align: center; color: var(--text-secondary); padding: 40px;">
+                            <i class="fa-solid fa-spinner fa-spin" style="font-size: 24px; margin-bottom: 10px;"></i>
+                            <p>جاري تحميل الطلبات الحية...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <h2 class="section-title"><i class="fa-solid fa-bell-concierge"></i> استدعاءات الطاولة</h2>
+                    <div id="calls-container" class="calls-list">
+                        <!-- Loaded dynamically via JavaScript -->
+                        <div class="glass-card" style="text-align: center; color: var(--text-secondary); padding: 40px;">
+                            <p>جاري تحميل طلبات النادل...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- PANEL 2: MENU MANAGEMENT -->
+        <div id="menu-panel" class="dashboard-panel">
+            <div class="category-manager-container">
+                <!-- Categories Column -->
+                <div class="glass-card" style="padding: 20px;">
+                    <h3 class="section-title" style="font-size: 18px;"><i class="fa-solid fa-list"></i> أقسام المنيو</h3>
+                    
+                    <form action="/dashboard/add-category" method="POST" style="margin-bottom: 20px; display: flex; gap: 8px;">
+                        <input type="text" name="name" class="form-control" placeholder="قسم جديد (مثال: برجر)" required style="padding: 8px 12px; font-size: 14px;">
+                        <button type="submit" class="btn btn-primary" style="padding: 8px 16px;"><i class="fa-solid fa-plus"></i></button>
+                    </form>
+                    
+                    <div class="category-list">
+                        {% for cat in categories %}
+                        <div class="category-item">
+                            <span style="font-weight: 600;">{{ cat.name }}</span>
+                            <form action="/dashboard/delete-category/{{ cat.id }}" method="POST" onsubmit="return confirm('حذف هذا القسم سيحذف جميع الوجبات التابعة له! هل أنت متأكد؟')">
+                                <button type="submit" style="background: none; border: none; color: var(--danger-color); cursor: pointer;"><i class="fa-solid fa-trash"></i></button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <p style="text-align: center; color: var(--text-secondary); font-size: 13px; padding: 20px;">لا توجد أقسام بعد. أضف قسماً للبدء.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+                
+                <!-- Menu Items Column -->
+                <div class="glass-card" style="padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 class="section-title" style="font-size: 18px; margin-bottom: 0;"><i class="fa-solid fa-burger"></i> الوجبات والأطباق</h3>
+                        <button class="btn btn-primary" onclick="openAddModal()" style="padding: 8px 16px; font-size: 13px;"><i class="fa-solid fa-plus"></i> إضافة وجبة جديدة</button>
+                    </div>
+                    
+                    <div class="menu-items-grid">
+                        {% for item in menu_items %}
+                        <div class="menu-item-card">
+                            <div class="menu-item-image-wrapper">
+                                {% if item.image_path %}
+                                    <img src="{{ url_for('static', filename='uploads/' + item.image_path) }}" alt="{{ item.name }}" class="menu-item-img">
+                                {% else %}
+                                    <div class="menu-item-no-image">
+                                        <i class="fa-solid fa-image"></i>
+                                        <span>لا توجد صورة</span>
+                                    </div>
+                                {% endif %}
+                                <span class="menu-item-badge {% if item.available == 1 %}badge-available{% else %}badge-unavailable{% endif %}">
+                                    {% if item.available == 1 %}متاح{% else %}غير متاح{% endif %}
+                                </span>
+                            </div>
+                            
+                            <div class="menu-item-details">
+                                <div class="menu-item-title">
+                                    <span>{{ item.name }}</span>
+                                    <span class="menu-item-price">{{ item.price }} ر.س</span>
+                                </div>
+                                <span style="font-size: 11px; color: var(--accent-color); font-weight: bold; margin-bottom: 8px;">{{ item.category_name }}</span>
+                                <p class="menu-item-desc">{{ item.description or 'لا يوجد وصف مضاف.' }}</p>
+                                
+                                <div class="menu-item-actions-panel">
+                                    <button class="btn btn-secondary" onclick='openEditModal({{ {
+                                        "id": item.id,
+                                        "name": item.name,
+                                        "description": item.description,
+                                        "price": item.price,
+                                        "category_id": item.category_id,
+                                        "available": item.available
+                                    }|tojson }})'><i class="fa-solid fa-pen-to-square"></i> تعديل</button>
+                                    
+                                    <form action="/dashboard/delete-item/{{ item.id }}" method="POST" style="flex: 1;" onsubmit="return confirm('هل تريد حذف هذه الوجبة نهائياً؟')">
+                                        <button type="submit" class="btn btn-danger" style="width: 100%;"><i class="fa-solid fa-trash"></i></button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div style="grid-column: 1/-1; text-align: center; color: var(--text-secondary); padding: 40px;">
+                            لا توجد وجبات مضافة بعد. أضف وجبة للبدء بالبيع!
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- PANEL 3: TABLES & QR CODE -->
+        <div id="tables-panel" class="dashboard-panel">
+            <div class="glass-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <h2 class="section-title" style="margin-bottom: 5px;"><i class="fa-solid fa-qrcode"></i> إدارة الطاولات والـ QR Code</h2>
+                        <p style="color: var(--text-secondary); font-size: 13px;">أضف الطاولات لتوليد باركود فريد يوضع على كل طاولة لكي يستطيع العملاء الطلب منه مباشرة.</p>
+                    </div>
+                    <button class="btn btn-success" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة رموز جميع الطاولات</button>
+                </div>
+                
+                <div class="glass-card add-table-form-container" style="background: rgba(0,0,0,0.15); padding: 20px; margin-bottom: 30px;">
+                    <h3 style="font-family: var(--font-heading); font-size: 16px; margin-bottom: 12px;"><i class="fa-solid fa-plus-circle"></i> إضافة طاولة جديدة</h3>
+                    <form action="/dashboard/add-table" method="POST" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                        <div style="flex: 1; min-width: 200px;">
+                            <label class="form-label" for="table_number">رقم أو اسم الطاولة</label>
+                            <input type="text" id="table_number" name="table_number" class="form-control" placeholder="مثال: 1 أو 2 أو VIP" required style="padding: 10px;">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="padding: 10px 24px;"><i class="fa-solid fa-qrcode"></i> إضافة وتوليد الباركود</button>
+                    </form>
+                </div>
+                
+                <div class="tables-grid">
+                    {% for table in tables %}
+                    <div class="table-card">
+                        <div class="table-card-number">طاولة {{ table.table_number }}</div>
+                        <div class="qr-preview-container">
+                            {% if table.qr_code_path %}
+                                <img src="{{ url_for('static', filename='qrcodes/' + table.qr_code_path) }}" alt="QR Table {{ table.table_number }}" class="qr-preview-img">
+                            {% else %}
+                                <div style="color: #ccc;"><i class="fa-solid fa-qrcode fa-3x"></i></div>
+                            {% endif %}
+                        </div>
+                        <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 15px; font-family: monospace;">Token: {{ table.token[:8] }}...</div>
+                        
+                        <div class="table-actions">
+                            <a href="{{ url_for('static', filename='qrcodes/' + table.qr_code_path) }}" download="Table-{{ table.table_number }}.png" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; flex: 1;"><i class="fa-solid fa-download"></i> تنزيل</a>
+                            <form action="/dashboard/delete-table/{{ table.id }}" method="POST" style="flex: 1;" onsubmit="return confirm('حذف الطاولة سيؤدي لتعطيل الباركود الحالي المرتبط بها! هل أنت متأكد؟')">
+                                <button type="submit" class="btn btn-danger" style="width: 100%; padding: 6px 12px; font-size: 12px;"><i class="fa-solid fa-trash"></i></button>
+                            </form>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div style="grid-column: 1/-1; text-align: center; color: var(--text-secondary); padding: 40px;">
+                        لا توجد طاولات مضافة بعد. يرجى إضافة طاولة لتوليد الرموز.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+    </div>
+</div>
+
+<!-- ADD MEAL MODAL -->
+<div id="add-meal-modal" class="modal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal('add-meal-modal')">&times;</button>
+        <h3 class="modal-title">إضافة وجبة جديدة للمنيو</h3>
+        <form action="/dashboard/add-item" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label class="form-label" for="add_item_name">اسم الوجبة</label>
+                <input type="text" id="add_item_name" name="name" class="form-control" placeholder="مثال: شاورما دجاج سوبر" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="add_item_category">القسم التابع له</label>
+                <select id="add_item_category" name="category_id" class="form-control" required>
+                    <option value="">-- اختر القسم --</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}">{{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="add_item_price">السعر (ر.س)</label>
+                <input type="number" step="0.01" min="0" id="add_item_price" name="price" class="form-control" placeholder="مثال: 15.50" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="add_item_desc">الوصف</label>
+                <textarea id="add_item_desc" name="description" class="form-control" rows="3" placeholder="مكونات الوجبة وتفاصيلها..."></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="add_item_image">صورة الوجبة</label>
+                <input type="file" id="add_item_image" name="image" class="form-control" accept="image/*">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="fa-solid fa-plus-circle"></i> إضافة إلى المنيو</button>
+        </form>
+    </div>
+</div>
+
+<!-- EDIT MEAL MODAL -->
+<div id="edit-meal-modal" class="modal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeModal('edit-meal-modal')">&times;</button>
+        <h3 class="modal-title">تعديل وجبة</h3>
+        <form id="edit-meal-form" action="" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label class="form-label" for="edit_item_name">اسم الوجبة</label>
+                <input type="text" id="edit_item_name" name="name" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="edit_item_price">السعر (ر.س)</label>
+                <input type="number" step="0.01" min="0" id="edit_item_price" name="price" class="form-control" required>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="edit_item_desc">الوصف</label>
+                <textarea id="edit_item_desc" name="description" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="edit_item_image">صورة الوجبة (اتركه فارغاً للاحتفاظ بالصورة الحالية)</label>
+                <input type="file" id="edit_item_image" name="image" class="form-control" accept="image/*">
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="edit_item_available">حالة التوافر</label>
+                <select id="edit_item_available" name="available" class="form-control">
+                    <option value="1">متاحة حالياً للعملاء</option>
+                    <option value="0">غير متاحة (نفدت الكمية)</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%;"><i class="fa-solid fa-save"></i> حفظ التعديلات</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Audio Notification Chime using Web Audio API (Dependency-Free & Works Offline)
+    let audioCtx = null;
+    
+    function playChime() {
+        try {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            
+            // Double chime sound
+            const playTone = (freq, startTime, duration) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                
+                gain.gain.setValueAtTime(0.3, startTime);
+                gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc.start(startTime);
+                osc.stop(startTime + duration);
+            };
+            
+            const now = audioCtx.currentTime;
+            // Tone 1: high frequency sweet note
+            playTone(587.33, now, 0.15); // D5
+            // Tone 2: even higher note starting a bit later
+            playTone(880.00, now + 0.12, 0.35); // A5
+        } catch (e) {
+            console.error("Audio Context could not start:", e);
+        }
+    }
+
+    // Tab Switching Logic
+    function switchPanel(panelId, btn) {
+        // Hide all panels
+        document.querySelectorAll('.dashboard-panel').forEach(p => p.classList.remove('active'));
+        // Show current panel
+        document.getElementById(panelId).classList.add('active');
+        
+        // Remove active class from buttons
+        document.querySelectorAll('.sidebar-btn').forEach(b => b.classList.remove('active'));
+        // Add to clicked button
+        btn.classList.add('active');
+        
+        // Save current active tab in local storage
+        localStorage.setItem('active_tab', panelId);
+    }
+    
+    // Restore active tab
+    window.addEventListener('DOMContentLoaded', () => {
+        const savedTab = localStorage.getItem('active_tab');
+        if (savedTab) {
+            const targetBtn = Array.from(document.querySelectorAll('.sidebar-btn')).find(b => b.getAttribute('onclick').includes(savedTab));
+            if (targetBtn) targetBtn.click();
+        }
+        
+        // Start polling for live orders and waiter calls
+        pollDashboardData();
+        setInterval(pollDashboardData, 5000);
+    });
+
+    // Modals control
+    function closeModal(id) {
+        document.getElementById(id).style.display = 'none';
+    }
+    
+    function openAddModal() {
+        document.getElementById('add-meal-modal').style.display = 'flex';
+    }
+    
+    function openEditModal(item) {
+        const modal = document.getElementById('edit-meal-modal');
+        const form = document.getElementById('edit-meal-form');
+        
+        // Set action url
+        form.action = `/dashboard/edit-item/${item.id}`;
+        
+        // Fill fields
+        document.getElementById('edit_item_name').value = item.name;
+        document.getElementById('edit_item_price').value = item.price;
+        document.getElementById('edit_item_desc').value = item.description || '';
+        document.getElementById('edit_item_available').value = item.available;
+        
+        modal.style.display = 'flex';
+    }
+
+    // Polling System for Real-time Orders & Waiter Calls
+    let lastOrderCount = -1;
+    let lastCallCount = -1;
+
+    async function pollDashboardData() {
+        try {
+            // 1. Fetch Orders
+            const ordersResponse = await fetch('/api/restaurant/orders');
+            const orders = await ordersResponse.json();
+            
+            // 2. Fetch Waiter Calls
+            const callsResponse = await fetch('/api/restaurant/waiter-calls');
+            const calls = await callsResponse.json();
+            
+            // Render Orders
+            renderOrders(orders);
+            
+            // Render Calls
+            renderCalls(calls);
+            
+            // Sound notification trigger
+            if (lastOrderCount !== -1 && orders.length > lastOrderCount) {
+                playChime();
+            }
+            if (lastCallCount !== -1 && calls.length > lastCallCount) {
+                playChime();
+            }
+            
+            lastOrderCount = orders.length;
+            lastCallCount = calls.length;
+            
+        } catch (error) {
+            console.error("Error polling dashboard data:", error);
+        }
+    }
+    
+    function renderOrders(orders) {
+        const container = document.getElementById('orders-container');
+        if (orders.length === 0) {
+            container.innerHTML = `
+                <div class="glass-card" style="text-align: center; color: var(--text-secondary); padding: 40px;">
+                    <i class="fa-solid fa-clipboard-list" style="font-size: 36px; margin-bottom: 10px; opacity: 0.5;"></i>
+                    <p>لا توجد طلبات واردة حالياً.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        orders.forEach(o => {
+            let statusLabel = '';
+            let statusClass = o.status;
+            if (o.status === 'pending') statusLabel = '⏳ قيد الانتظار';
+            else if (o.status === 'preparing') statusLabel = '🍳 يتم التحضير';
+            else if (o.status === 'completed') statusLabel = '✅ مكتمل';
+            else if (o.status === 'cancelled') statusLabel = '❌ ملغي';
+            
+            let itemsHtml = '';
+            o.items.forEach(item => {
+                itemsHtml += `
+                    <li class="order-item-row">
+                        <span>${item.item_name}</span>
+                        <span><span class="order-item-qty">x${item.quantity}</span> - ${item.price} ر.س</span>
+                    </li>
+                `;
+            });
+            
+            // Format time
+            const date = new Date(o.created_at + 'Z'); // UTC
+            const timeStr = date.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+            
+            html += `
+                <div class="order-feed-card ${o.status}">
+                    <div class="feed-card-header">
+                        <span class="feed-card-title">طاولة ${o.table_number} - طلب #${o.id}</span>
+                        <span class="feed-card-time">${timeStr}</span>
+                    </div>
+                    <div class="feed-card-body">
+                        <ul class="order-items-list">${itemsHtml}</ul>
+                        <div class="order-total-price">الإجمالي: ${o.total_price.toFixed(2)} ر.س</div>
+                    </div>
+                    <div class="feed-card-actions">
+                        <select onchange="updateOrderStatus(${o.id}, this.value)">
+                            <option value="pending" ${o.status === 'pending' ? 'selected' : ''}>⏳ قيد الانتظار</option>
+                            <option value="preparing" ${o.status === 'preparing' ? 'selected' : ''}>🍳 يتم التحضير</option>
+                            <option value="completed" ${o.status === 'completed' ? 'selected' : ''}>✅ مكتمل</option>
+                            <option value="cancelled" ${o.status === 'cancelled' ? 'selected' : ''}>❌ إلغاء الطلب</option>
+                        </select>
+                    </div>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+    
+    function renderCalls(calls) {
+        const container = document.getElementById('calls-container');
+        if (calls.length === 0) {
+            container.innerHTML = `
+                <div class="glass-card" style="text-align: center; color: var(--text-secondary); padding: 40px;">
+                    <i class="fa-solid fa-mug-hot" style="font-size: 36px; margin-bottom: 10px; opacity: 0.5;"></i>
+                    <p>لا توجد طلبات نادل نشطة.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        let html = '';
+        calls.forEach(c => {
+            let label = '';
+            let icon = '';
+            let btnClass = 'btn-success';
+            if (c.type === 'waiter') {
+                label = 'استدعاء النادل';
+                icon = 'fa-bell';
+                btnClass = 'btn-primary';
+            } else {
+                label = 'طلب الفاتورة';
+                icon = 'fa-receipt';
+                btnClass = 'btn-success';
+            }
+            
+            const date = new Date(c.created_at + 'Z');
+            const timeStr = date.toLocaleTimeString('ar-SA', { hour: '2-digit', minute: '2-digit' });
+            
+            html += `
+                <div class="call-feed-card ${c.type}">
+                    <div class="feed-card-header">
+                        <span class="feed-card-title"><i class="fa-solid ${icon}"></i> طاولة ${c.table_number}</span>
+                        <span class="feed-card-time">${timeStr}</span>
+                    </div>
+                    <div class="feed-card-body" style="font-weight: bold; font-size: 15px; margin-bottom: 10px;">
+                        ${label}
+                    </div>
+                    <button class="btn ${btnClass}" onclick="resolveCall(${c.id})" style="padding: 6px 12px; font-size: 12px; width: 100%;">
+                        <i class="fa-solid fa-circle-check"></i> تم التلبية
+                    </button>
+                </div>
+            `;
+        });
+        container.innerHTML = html;
+    }
+    
+    async function updateOrderStatus(orderId, status) {
+        try {
+            await fetch(`/api/order/update-status/${orderId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: status })
+            });
+            pollDashboardData();
+        } catch (error) {
+            console.error("Error updating status:", error);
+        }
+    }
+    
+    async function resolveCall(callId) {
+        try {
+            await fetch(`/api/waiter-call/resolve/${callId}`, {
+                method: 'POST'
+            });
+            pollDashboardData();
+        } catch (error) {
+            console.error("Error resolving call:", error);
+        }
+    }
+</script>
+{% endblock %}
