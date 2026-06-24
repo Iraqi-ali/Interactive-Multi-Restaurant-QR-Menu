@@ -449,19 +449,19 @@
                 <div class="stats-grid">
                     <div class="stat-card desktop-card">
                         <i class="fa-solid fa-calendar-day stat-icon" style="color: var(--success-color);"></i>
-                        <div class="stat-value" id="overview-daily-sales">0.00 ر.س</div>
+                        <div class="stat-value" id="overview-daily-sales">0.00 {% if restaurant.currency == 'USD' %}${% else %}د.ع{% endif %}</div>
                         <div class="stat-label">مبيعات اليوم الكلية</div>
                     </div>
                     
                     <div class="stat-card desktop-card">
                         <i class="fa-solid fa-calendar-week stat-icon" style="color: var(--warning-color);"></i>
-                        <div class="stat-value" id="overview-weekly-sales">0.00 ر.س</div>
+                        <div class="stat-value" id="overview-weekly-sales">0.00 {% if restaurant.currency == 'USD' %}${% else %}د.ع{% endif %}</div>
                         <div class="stat-label">المبيعات الأسبوعية (٧ أيام)</div>
                     </div>
 
                     <div class="stat-card desktop-card">
                         <i class="fa-solid fa-calendar-days stat-icon" style="color: var(--win11-accent);"></i>
-                        <div class="stat-value" id="overview-monthly-sales">0.00 ر.س</div>
+                        <div class="stat-value" id="overview-monthly-sales">0.00 {% if restaurant.currency == 'USD' %}${% else %}د.ع{% endif %}</div>
                         <div class="stat-label">مبيعات الشهر الحالي</div>
                     </div>
 
@@ -754,7 +754,7 @@
                                 <div class="menu-item-details" style="padding: 15px;">
                                     <div class="menu-item-title" style="font-size: 15px;">
                                         <span>{{ item.name }}</span>
-                                        <span class="menu-item-price" style="font-size: 14px;">{{ item.price }} ر.س</span>
+                                        <span class="menu-item-price" style="font-size: 14px;">{{ item.price }} {% if restaurant.currency == 'USD' %}${% else %}د.ع{% endif %}</span>
                                     </div>
                                     <span style="font-size: 10px; color: var(--text-secondary);">{{ item.category_name }}</span>
                                     <p class="menu-item-desc" style="font-size: 12px; margin-top: 8px;">{{ item.description or 'لا يوجد وصف.' }}</p>
@@ -797,13 +797,13 @@
                 <div class="stats-grid">
                     <div class="stat-card desktop-card">
                         <i class="fa-solid fa-calendar-day stat-icon" style="color: var(--success-color);"></i>
-                        <div class="stat-value" id="daily-sales-val">0.00 ر.س</div>
+                        <div class="stat-value" id="daily-sales-val">0.00 {% if restaurant.currency == 'USD' %}${% else %}د.ع{% endif %}</div>
                         <div class="stat-label">مبيعات اليوم (الكاش المؤكد)</div>
                     </div>
                     
                     <div class="stat-card desktop-card">
                         <i class="fa-solid fa-calendar-days stat-icon" style="color: var(--win11-accent);"></i>
-                        <div class="stat-value" id="monthly-sales-val">0.00 ر.س</div>
+                        <div class="stat-value" id="monthly-sales-val">0.00 {% if restaurant.currency == 'USD' %}${% else %}د.ع{% endif %}</div>
                         <div class="stat-label">مبيعات الشهر الحالي</div>
                     </div>
                 </div>
@@ -866,6 +866,14 @@
                             <div class="form-group" style="margin-bottom: 0;">
                                 <label class="form-label" for="rest_name">اسم المطعم</label>
                                 <input type="text" id="rest_name" name="name" class="form-control" value="{{ restaurant.name }}" required style="border-radius: 6px;">
+                            </div>
+                            
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label class="form-label" for="rest_currency">العملة الافتراضية للمنيو</label>
+                                <select id="rest_currency" name="currency" class="form-control" style="border-radius: 6px; background: rgba(0,0,0,0.3); color: #fff;">
+                                    <option value="IQD" {% if restaurant.currency == 'IQD' %}selected{% endif %}>🇮🇶 دينار عراقي (IQD)</option>
+                                    <option value="USD" {% if restaurant.currency == 'USD' %}selected{% endif %}>🇺🇸 دولار أمريكي (USD)</option>
+                                </select>
                             </div>
                             
                             <div class="form-group" style="margin-bottom: 0;">
@@ -982,15 +990,15 @@
             <div style="background: rgba(0,0,0,0.15); padding: 12px; border-radius: 8px; font-size: 13px; display: flex; flex-direction: column; gap: 6px;">
                 <div style="display: flex; justify-content: space-between;">
                     <span>المجموع الفرعي</span>
-                    <span id="invoice-subtotal">0.00 ر.س</span>
+                    <span id="invoice-subtotal">0.00 {% if restaurant.currency == 'USD' %}${% else %}د.ع{% endif %}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; color: var(--text-secondary);">
                     <span>ضريبة القيمة المضافة (15%)</span>
-                    <span id="invoice-vat">0.00 ر.س</span>
+                    <span id="invoice-vat">0.00 {% if restaurant.currency == 'USD' %}${% else %}د.ع{% endif %}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; border-top: 1px solid var(--win11-border); padding-top: 8px; color: var(--success-color);">
                     <span>الإجمالي المستحق</span>
-                    <span id="invoice-total">0.00 ر.س</span>
+                    <span id="invoice-total">0.00 {% if restaurant.currency == 'USD' %}${% else %}د.ع{% endif %}</span>
                 </div>
             </div>
             
@@ -1026,7 +1034,7 @@
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="add_item_price">السعر (ر.س)</label>
+                    <label class="form-label" for="add_item_price">السعر ({% if restaurant.currency == 'USD' %}${% else %}د.ع{% endif %})</label>
                     <input type="number" step="0.01" min="0" id="add_item_price" name="price" class="form-control" required style="border-radius: 6px;">
                 </div>
                 <div class="form-group">
@@ -1057,7 +1065,7 @@
                     <input type="text" id="edit_item_name" name="name" class="form-control" required style="border-radius: 6px;">
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="edit_item_price">السعر (ر.س)</label>
+                    <label class="form-label" for="edit_item_price">السعر ({% if restaurant.currency == 'USD' %}${% else %}د.ع{% endif %})</label>
                     <input type="number" step="0.01" min="0" id="edit_item_price" name="price" class="form-control" required style="border-radius: 6px;">
                 </div>
                 <div class="form-group">
@@ -1090,6 +1098,8 @@
 <script>
     // Audio Notification Chime (Web Audio API)
     let audioCtx = null;
+    const restaurantCurrency = '{{ restaurant.currency or "IQD" }}';
+    const currencyLabel = restaurantCurrency === 'USD' ? '$' : 'د.ع';
     function playChime() {
         try {
             if (!audioCtx) {
@@ -1281,7 +1291,7 @@
                         </div>
                     </div>
                     <div style="text-align: left; display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
-                        <span style="font-weight: bold; color: var(--success-color); font-size: 14px;">${o.total_price.toFixed(2)} ر.س</span>
+                        <span style="font-weight: bold; color: var(--success-color); font-size: 14px;">${o.total_price.toFixed(2)} ${currencyLabel}</span>
                         ${statusBadge}
                     </div>
                 </div>
@@ -1306,9 +1316,9 @@
             const analytics = await analyticsRes.json();
             
             // Update overview cards
-            document.getElementById('overview-daily-sales').innerText = `${analytics.daily_sales.toFixed(2)} ر.س`;
-            document.getElementById('overview-weekly-sales').innerText = `${analytics.weekly_sales.toFixed(2)} ر.س`;
-            document.getElementById('overview-monthly-sales').innerText = `${analytics.monthly_sales.toFixed(2)} ر.س`;
+            document.getElementById('overview-daily-sales').innerText = `${analytics.daily_sales.toFixed(2)} ${currencyLabel}`;
+            document.getElementById('overview-weekly-sales').innerText = `${analytics.weekly_sales.toFixed(2)} ${currencyLabel}`;
+            document.getElementById('overview-monthly-sales').innerText = `${analytics.monthly_sales.toFixed(2)} ${currencyLabel}`;
             document.getElementById('overview-active-orders').innerText = analytics.active_orders_count;
             
             // Update table stats
@@ -1329,7 +1339,7 @@
             orders.forEach(o => {
                 if (lastOrderCount !== -1 && !knownOrders.has(o.id)) {
                     isNewOrder = true;
-                    showTrayNotification('طلب جديد وارد!', `طاولة ${o.table_number} أرسلت طلباً جديداً للمطبخ بقيمة ${o.total_price.toFixed(2)} ر.س.`);
+                    showTrayNotification('طلب جديد وارد!', `طاولة ${o.table_number} أرسلت طلباً جديداً للمطبخ بقيمة ${o.total_price.toFixed(2)} ${currencyLabel}.`);
                 }
                 knownOrders.add(o.id);
             });
@@ -1393,7 +1403,7 @@
                 itemsHtml += `
                     <li class="order-item-row">
                         <span>${item.item_name}</span>
-                        <span><span class="order-item-qty">x${item.quantity}</span> - ${item.price} ر.س</span>
+                        <span><span class="order-item-qty">x${item.quantity}</span> - ${item.price} ${currencyLabel}</span>
                     </li>
                 `;
             });
@@ -1418,7 +1428,7 @@
                     <div class="feed-card-body">
                         <ul class="order-items-list">${itemsHtml}</ul>
                         ${notesHtml}
-                        <div class="order-total-price">المجموع: ${o.total_price.toFixed(2)} ر.س</div>
+                        <div class="order-total-price">المجموع: ${o.total_price.toFixed(2)} ${currencyLabel}</div>
                     </div>
                     <div class="feed-card-actions">
                         <select onchange="updateOrderStatus(${o.id}, this.value)" style="border-radius: 6px; padding: 6px;">
@@ -1537,15 +1547,15 @@
                         <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
                             <td style="padding: 8px 0;">${item.name}</td>
                             <td style="padding: 8px 0; text-align: center; font-weight: bold; color: var(--win11-accent);">x${item.quantity}</td>
-                            <td style="padding: 8px 0; text-align: left;">${item.total.toFixed(2)} ر.س</td>
+                            <td style="padding: 8px 0; text-align: left;">${item.total.toFixed(2)} ${currencyLabel}</td>
                         </tr>
                     `;
                 });
             }
             
-            document.getElementById('invoice-subtotal').innerText = `${data.subtotal.toFixed(2)} ر.س`;
-            document.getElementById('invoice-vat').innerText = `${data.vat.toFixed(2)} ر.س`;
-            document.getElementById('invoice-total').innerText = `${data.grand_total.toFixed(2)} ر.س`;
+            document.getElementById('invoice-subtotal').innerText = `${data.subtotal.toFixed(2)} ${currencyLabel}`;
+            document.getElementById('invoice-vat').innerText = `${data.vat.toFixed(2)} ${currencyLabel}`;
+            document.getElementById('invoice-total').innerText = `${data.grand_total.toFixed(2)} ${currencyLabel}`;
             
             document.getElementById('invoice-modal').style.display = 'flex';
         } catch (e) {
@@ -1581,8 +1591,8 @@
             const data = await res.json();
             
             // Set stats values
-            document.getElementById('daily-sales-val').innerText = `${data.daily_sales.toFixed(2)} ر.س`;
-            document.getElementById('monthly-sales-val').innerText = `${data.monthly_sales.toFixed(2)} ر.س`;
+            document.getElementById('daily-sales-val').innerText = `${data.daily_sales.toFixed(2)} ${currencyLabel}`;
+            document.getElementById('monthly-sales-val').innerText = `${data.monthly_sales.toFixed(2)} ${currencyLabel}`;
             
             // Render Top Items table
             const tbody = document.querySelector('#top-items-table tbody');
@@ -1798,15 +1808,15 @@
                 <div class="totals">
                     <div class="totals-row">
                         <span>المجموع الفرعي:</span>
-                        <span>${currentInvoiceData.subtotal.toFixed(2)} ر.س</span>
+                        <span>${currentInvoiceData.subtotal.toFixed(2)} ${currencyLabel}</span>
                     </div>
                     <div class="totals-row">
                         <span>ضريبة القيمة المضافة (15%):</span>
-                        <span>${currentInvoiceData.vat.toFixed(2)} ر.س</span>
+                        <span>${currentInvoiceData.vat.toFixed(2)} ${currencyLabel}</span>
                     </div>
                     <div class="totals-row" style="font-weight: bold; font-size: 12px; border-top: 1px dashed #000; padding-top: 4px;">
                         <span>الإجمالي الكلي:</span>
-                        <span>${currentInvoiceData.grand_total.toFixed(2)} ر.س</span>
+                        <span>${currentInvoiceData.grand_total.toFixed(2)} ${currencyLabel}</span>
                     </div>
                 </div>
                 

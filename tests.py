@@ -208,5 +208,48 @@ class TestQRMenuSystem(unittest.TestCase):
         
         conn.close()
 
+    def test_03_update_settings_and_currency_flow(self):
+        print("\n--- Test 3: Update Settings and Currency Flow ---")
+        conn = db.get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM restaurants LIMIT 1")
+        restaurant = cursor.fetchone()
+        self.assertIsNotNone(restaurant)
+        restaurant_id = restaurant['id']
+        conn.close()
+        
+        # Log in first
+        with self.client.session_transaction() as sess:
+            sess['restaurant_id'] = restaurant_id
+            sess['user_id'] = 2
+            sess['role'] = 'restaurant'
+            sess['restaurant_slug'] = 'mostafa'
+            
+        settings_payload = {
+            "name": "المصطفى للبرغر الممتاز",
+            "theme_name": "custom",
+            "theme_primary_color": "#00ff00",
+            "theme_bg_color": "#222222",
+            "theme_surface_color": "#333333",
+            "theme_text_color": "#dddddd",
+            "currency": "USD"
+        }
+        
+        print("Sending update settings request...")
+        response = self.client.post('/dashboard/update-settings', data=settings_payload)
+        self.assertEqual(response.status_code, 302) # redirects to dashboard
+        
+        # Check database directly to see if currency and name are updated
+        conn = db.get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT name, currency, theme_name FROM restaurants WHERE id = ?", (restaurant_id,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        self.assertEqual(row['name'], "المصطفى للبرغر الممتاز")
+        self.assertEqual(row['currency'], "USD")
+        self.assertEqual(row['theme_name'], "custom")
+        print("Settings and Currency updated and verified in database successfully!")
+
 if __name__ == '__main__':
     unittest.main()

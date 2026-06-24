@@ -39,6 +39,7 @@ def init_db():
         theme_bg_color TEXT DEFAULT '#f8fafc',
         theme_surface_color TEXT DEFAULT '#ffffff',
         theme_text_color TEXT DEFAULT '#1e293b',
+        currency TEXT NOT NULL DEFAULT 'IQD',
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
     ''')
@@ -170,6 +171,10 @@ def init_db():
         pass
     try:
         cursor.execute("ALTER TABLE restaurants ADD COLUMN theme_text_color TEXT DEFAULT '#1e293b'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE restaurants ADD COLUMN currency TEXT NOT NULL DEFAULT 'IQD'")
     except sqlite3.OperationalError:
         pass
     
@@ -635,20 +640,20 @@ def get_sales_analytics(restaurant_id):
         'sales_trend': sales_trend
     }
 
-def update_restaurant_settings(restaurant_id, name, theme_name, primary_color, bg_color, surface_color, text_color, logo=None):
+def update_restaurant_settings(restaurant_id, name, theme_name, primary_color, bg_color, surface_color, text_color, currency, logo=None):
     conn = get_db()
     cursor = conn.cursor()
     if logo:
         cursor.execute("""
             UPDATE restaurants 
-            SET name = ?, theme_name = ?, theme_primary_color = ?, theme_bg_color = ?, theme_surface_color = ?, theme_text_color = ?, logo = ?
+            SET name = ?, theme_name = ?, theme_primary_color = ?, theme_bg_color = ?, theme_surface_color = ?, theme_text_color = ?, currency = ?, logo = ?
             WHERE id = ?
-        """, (name, theme_name, primary_color, bg_color, surface_color, text_color, logo, restaurant_id))
+        """, (name, theme_name, primary_color, bg_color, surface_color, text_color, currency, logo, restaurant_id))
     else:
         cursor.execute("""
             UPDATE restaurants 
-            SET name = ?, theme_name = ?, theme_primary_color = ?, theme_bg_color = ?, theme_surface_color = ?, theme_text_color = ?
+            SET name = ?, theme_name = ?, theme_primary_color = ?, theme_bg_color = ?, theme_surface_color = ?, theme_text_color = ?, currency = ?
             WHERE id = ?
-        """, (name, theme_name, primary_color, bg_color, surface_color, text_color, restaurant_id))
+        """, (name, theme_name, primary_color, bg_color, surface_color, text_color, currency, restaurant_id))
     conn.commit()
     conn.close()

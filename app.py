@@ -221,6 +221,7 @@ def update_settings():
     theme_bg_color = request.form.get('theme_bg_color')
     theme_surface_color = request.form.get('theme_surface_color')
     theme_text_color = request.form.get('theme_text_color')
+    currency = request.form.get('currency', 'IQD')
     
     # Handle Logo Upload
     logo_filename = None
@@ -255,6 +256,7 @@ def update_settings():
             theme_bg_color, 
             theme_surface_color, 
             theme_text_color, 
+            currency,
             logo_filename
         )
         session['restaurant_name'] = name

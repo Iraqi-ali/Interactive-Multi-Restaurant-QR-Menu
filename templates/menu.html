@@ -451,7 +451,7 @@
                 <div class="customer-item-title">{{ item.name }}</div>
                 <p class="customer-item-desc">{{ item.description or 'لا يوجد وصف.' }}</p>
                 <div class="customer-item-price-row">
-                    <span class="customer-item-price">{{ item.price }} <span class="lang-txt" data-key="currency">ر.س</span></span>
+                    <span class="customer-item-price">{{ item.price }} <span class="currency-label"></span></span>
                     
                     {% if item.available == 1 %}
                         <div class="qty-controls" id="controls-{{ item.id }}" style="display: {% if table.id != 0 %}flex{% else %}none{% endif %};">
@@ -617,6 +617,15 @@
     const restaurantId = {{ restaurant.id }};
     const tableId = {{ table.id }};
     const tableToken = '{{ table.token }}';
+    const restaurantCurrency = '{{ restaurant.currency or "IQD" }}';
+    
+    function getCurrencyLabel(lang) {
+        if (restaurantCurrency === 'USD') {
+            return '$';
+        } else {
+            return lang === 'ar' ? 'د.ع' : 'IQD';
+        }
+    }
     
     // Translation Dictionary
     const translations = {
@@ -753,6 +762,12 @@
             }
         });
         
+        // Translate all currency labels dynamically
+        const curLabel = getCurrencyLabel(lang);
+        document.querySelectorAll('.currency-label').forEach(elem => {
+            elem.innerText = curLabel;
+        });
+        
         // Refresh cart footer and elements
         updateUI();
     }
@@ -876,7 +891,7 @@
         if (totalItems > 0) {
             cartFooter.style.display = 'block';
             const itemsLabel = currentLang === 'ar' ? 'وجبات' : 'items';
-            const currencyLabel = currentLang === 'ar' ? 'ر.س' : 'SAR';
+            const currencyLabel = getCurrencyLabel(currentLang);
             document.getElementById('cart-count').innerText = `${totalItems} ${itemsLabel}`;
             document.getElementById('cart-total').innerText = `${totalPrice.toFixed(2)} ${currencyLabel}`;
         } else {
@@ -897,7 +912,7 @@
             return;
         }
         
-        const currencyLabel = currentLang === 'ar' ? 'ر.س' : 'SAR';
+        const currencyLabel = getCurrencyLabel(currentLang);
         items.forEach(item => {
             const itemTotal = item.price * item.quantity;
             totalPrice += itemTotal;
@@ -1084,7 +1099,7 @@
             const tbody = document.getElementById('bill-items-body');
             tbody.innerHTML = '';
             
-            const currencyLabel = currentLang === 'ar' ? 'ر.س' : 'SAR';
+            const currencyLabel = getCurrencyLabel(currentLang);
             if (data.items.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 15px; color: var(--text-secondary);">${translations[currentLang].bill_empty}</td></tr>`;
             } else {
