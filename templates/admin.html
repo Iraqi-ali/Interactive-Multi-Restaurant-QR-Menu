@@ -2,106 +2,181 @@
 
 {% block title %}لوحة التحكم العامة - Super Admin{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Windows 11 UI overrides for Admin */
+    :root {
+        --win11-bg: rgba(32, 32, 56, 0.45);
+        --win11-acrylic: rgba(20, 20, 35, 0.75);
+        --win11-border: rgba(255, 255, 255, 0.08);
+        --win11-accent: #0078d4;
+        --win11-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+        --win11-radius: 12px;
+    }
+    
+    .win11-window {
+        background: var(--win11-bg);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid var(--win11-border);
+        border-radius: var(--win11-radius);
+        box-shadow: var(--win11-shadow);
+        overflow: hidden;
+        margin-bottom: 25px;
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    
+    .win11-window-header {
+        background: rgba(15, 15, 25, 0.8);
+        padding: 10px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--win11-border);
+    }
+    
+    .win11-window-title {
+        font-family: var(--font-heading);
+        font-weight: 600;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .win11-window-controls {
+        display: flex;
+        gap: 15px;
+        font-size: 11px;
+        color: var(--text-secondary);
+    }
+    
+    .win11-window-body {
+        padding: 24px;
+    }
+    
+    .desktop-card {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid var(--win11-border);
+        border-radius: 8px;
+        padding: 16px;
+        transition: all 0.2s ease;
+    }
+    
+    .desktop-card:hover {
+        background: rgba(255, 255, 255, 0.04);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="glass-card">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; border-bottom: 1px solid var(--glass-border); padding-bottom: 15px;">
-        <h1 class="section-title" style="margin-bottom: 0;"><i class="fa-solid fa-user-shield" style="color: var(--accent-color);"></i> إدارة النظام العامة (Super Admin)</h1>
-        <div style="background: rgba(124, 77, 255, 0.15); border: 1px solid var(--accent-color); padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 14px;">
-            لوحة المدير العام
+<div class="win11-window" style="margin-top: 20px;">
+    <div class="win11-window-header">
+        <div class="win11-window-title">
+            <i class="fa-solid fa-user-shield" style="color: var(--win11-accent);"></i>
+            إدارة النظام العامة (Super Admin Center)
+        </div>
+        <div class="win11-window-controls">
+            <span>&ndash;</span>
+            <span>&#9633;</span>
+            <span style="color: var(--danger-color);">&times;</span>
         </div>
     </div>
     
-    <!-- Stats Row -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <i class="fa-solid fa-store stat-icon"></i>
-            <div class="stat-value">{{ restaurants|length }}</div>
-            <div class="stat-label">المطاعم المسجلة</div>
-        </div>
-        <div class="stat-card">
-            <i class="fa-solid fa-check-circle stat-icon" style="background: linear-gradient(135deg, #00e676 0%, #00b0ff 100%); -webkit-background-clip: text;"></i>
-            <div class="stat-value">
-                {% set active_count = namespace(value=0) %}
-                {% for r in restaurants %}
-                    {% if r.status == 'active' %}
-                        {% set active_count.value = active_count.value + 1 %}
-                    {% endif %}
-                {% endfor %}
-                {{ active_count.value }}
+    <div class="win11-window-body">
+        
+        <!-- Stats Row -->
+        <div class="stats-grid" style="margin-bottom: 30px;">
+            <div class="stat-card desktop-card">
+                <i class="fa-solid fa-store stat-icon" style="color: var(--win11-accent);"></i>
+                <div class="stat-value">{{ restaurants|length }}</div>
+                <div class="stat-label">المطاعم المسجلة</div>
             </div>
-            <div class="stat-label">المطاعم النشطة</div>
-        </div>
-        <div class="stat-card">
-            <i class="fa-solid fa-hourglass-half stat-icon" style="background: linear-gradient(135deg, #ff9100 0%, #ff3d00 100%); -webkit-background-clip: text;"></i>
-            <div class="stat-value">{{ restaurants|length - active_count.value }}</div>
-            <div class="stat-label">المطاعم المعطلة</div>
-        </div>
-    </div>
-    
-    <h2 class="section-title" style="font-size: 20px; margin-top: 30px;"><i class="fa-solid fa-list"></i> قائمة المطاعم المسجلة في المنصة</h2>
-    
-    <div style="overflow-x: auto; margin-top: 15px;">
-        <table class="admin-table">
-            <thead>
-                <tr>
-                    <th>اسم المطعم</th>
-                    <th>اسم المستخدم</th>
-                    <th>رابط المنيو (Slug)</th>
-                    <th>الحالة</th>
-                    <th>الإجراءات</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for r in restaurants %}
-                <tr>
-                    <td style="font-weight: bold; display: flex; align-items: center; gap: 10px;">
-                        {% if r.logo %}
-                            <img src="{{ url_for('static', filename='uploads/' + r.logo) }}" alt="Logo" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--glass-border);">
-                        {% else %}
-                            <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--bg-secondary); border: 1px solid var(--glass-border); display: flex; align-items: center; justify-content: center; font-size: 14px;">🍽️</div>
-                        {% endif %}
-                        {{ r.name }}
-                    </td>
-                    <td>{{ r.username }}</td>
-                    <td>
-                        <a href="/r/{{ r.slug }}" target="_blank" style="color: var(--accent-color); text-decoration: none; font-family: monospace;">
-                            /r/{{ r.slug }} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i>
-                        </a>
-                    </td>
-                    <td>
+            <div class="stat-card desktop-card">
+                <i class="fa-solid fa-circle-check stat-icon" style="color: var(--success-color);"></i>
+                <div class="stat-value">
+                    {% set active_count = namespace(value=0) %}
+                    {% for r in restaurants %}
                         {% if r.status == 'active' %}
-                            <span class="status-badge status-active">نشط</span>
-                        {% else %}
-                            <span class="status-badge status-inactive">معطل</span>
+                            {% set active_count.value = active_count.value + 1 %}
                         {% endif %}
-                    </td>
-                    <td>
-                        <div style="display: flex; gap: 8px;">
-                            {% if r.status == 'active' %}
-                                <form action="/admin/toggle-status/{{ r.id }}" method="POST" style="display: inline;">
-                                    <button type="submit" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; font-weight: normal;"><i class="fa-solid fa-ban"></i> تعطيل</button>
-                                </form>
+                    {% endfor %}
+                    {{ active_count.value }}
+                </div>
+                <div class="stat-label">المطاعم النشطة</div>
+            </div>
+            <div class="stat-card desktop-card">
+                <i class="fa-solid fa-ban stat-icon" style="color: var(--danger-color);"></i>
+                <div class="stat-value">{{ restaurants|length - active_count.value }}</div>
+                <div class="stat-label">المطاعم المعطلة</div>
+            </div>
+        </div>
+        
+        <h2 class="section-title" style="font-size: 18px; margin-bottom: 15px;"><i class="fa-solid fa-list-check"></i> تدقيق ومراجعة حسابات المطاعم</h2>
+        
+        <div style="overflow-x: auto;">
+            <table class="admin-table" style="width: 100%; text-align: right;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--win11-border); color: var(--text-secondary);">
+                        <th style="padding: 12px 10px;">المطعم</th>
+                        <th style="padding: 12px 10px;">اسم المستخدم</th>
+                        <th style="padding: 12px 10px;">الرابط (Slug)</th>
+                        <th style="padding: 12px 10px;">الحالة</th>
+                        <th style="padding: 12px 10px;">التحكم والعمليات</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in restaurants %}
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                        <td style="padding: 12px 10px; font-weight: bold; display: flex; align-items: center; gap: 10px;">
+                            {% if r.logo %}
+                                <img src="{{ url_for('static', filename='uploads/' + r.logo) }}" alt="Logo" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--win11-border);">
                             {% else %}
-                                <form action="/admin/toggle-status/{{ r.id }}" method="POST" style="display: inline;">
-                                    <button type="submit" class="btn btn-success" style="padding: 6px 12px; font-size: 12px; font-weight: normal;"><i class="fa-solid fa-check"></i> تفعيل</button>
-                                </form>
+                                <div style="width: 32px; height: 32px; border-radius: 50%; background: var(--bg-secondary); border: 1px solid var(--win11-border); display: flex; align-items: center; justify-content: center; font-size: 14px;">🍽️</div>
                             {% endif %}
-                            
-                            <form action="/admin/delete-restaurant/{{ r.id }}" method="POST" style="display: inline;" onsubmit="return confirm('هل أنت متأكد من حذف هذا المطعم نهائياً؟ سيتم حذف جميع الأطعمة والطلبات والطاولات التابعة له ولا يمكن التراجع عن هذا الإجراء!')">
-                                <button type="submit" class="btn btn-danger" style="padding: 6px 12px; font-size: 12px; font-weight: normal;"><i class="fa-solid fa-trash"></i> حذف</button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 30px;">
-                        لا توجد مطاعم مسجلة حالياً في النظام.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                            {{ r.name }}
+                        </td>
+                        <td style="padding: 12px 10px;">{{ r.username }}</td>
+                        <td style="padding: 12px 10px;">
+                            <a href="/r/{{ r.slug }}" target="_blank" style="color: var(--win11-accent); text-decoration: none; font-family: monospace;">
+                                /r/{{ r.slug }} <i class="fa-solid fa-arrow-up-right-from-square" style="font-size: 10px;"></i>
+                            </a>
+                        </td>
+                        <td style="padding: 12px 10px;">
+                            {% if r.status == 'active' %}
+                                <span class="badge-status status-available-badge">نشط</span>
+                            {% else %}
+                                <span class="badge-status status-billing-badge">معطل</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 12px 10px;">
+                            <div style="display: flex; gap: 8px;">
+                                {% if r.status == 'active' %}
+                                    <form action="/admin/toggle-status/{{ r.id }}" method="POST" style="display: inline;">
+                                        <button type="submit" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; border-radius: 6px;"><i class="fa-solid fa-ban"></i> تعطيل</button>
+                                    </form>
+                                {% else %}
+                                    <form action="/admin/toggle-status/{{ r.id }}" method="POST" style="display: inline;">
+                                        <button type="submit" class="btn btn-success" style="padding: 6px 12px; font-size: 12px; border-radius: 6px;"><i class="fa-solid fa-check"></i> تفعيل ورخص</button>
+                                    </form>
+                                {% endif %}
+                                
+                                <form action="/admin/delete-restaurant/{{ r.id }}" method="POST" style="display: inline;" onsubmit="return confirm('حذف المطعم سيحذف جميع الوجبات والطلبات والطاولات للأبد ولا يمكن التراجع! هل أنت متأكد؟')">
+                                    <button type="submit" class="btn btn-danger" style="padding: 6px 12px; font-size: 12px; border-radius: 6px;"><i class="fa-solid fa-trash-can"></i> حذف نهائي</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: var(--text-secondary); padding: 30px;">
+                            لا توجد مطاعم مسجلة حالياً في النظام.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
 {% endblock %}

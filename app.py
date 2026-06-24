@@ -437,9 +437,19 @@ def api_create_order():
     # Calculate total price
     total_price = sum(item['price'] * item['quantity'] for item in items)
     
+    # 1. Manage Table Session & Turnover
+    session_id = table['current_session_id']
+    if not session_id or table['status'] == 'available':
+        # Start a brand new session
+        session_id = uuid.uuid4().hex
+        db.start_table_session(table_id, session_id)
+    elif table['status'] == 'billing':
+        # If table was billing but client ordered more, set status back to occupied
+        db.set_table_status(table_id, 'occupied')
+        
     try:
-        order_id = db.create_order(restaurant_id, table_id, total_price, items)
-        return jsonify({'success': True, 'order_id': order_id})
+        order_id = db.create_order(restaurant_id, table_id, total_price, items, session_id)
+        return jsonify({'success': True, 'order_id': order_id, 'session_id': session_id})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -462,7 +472,7 @@ def api_update_order_status(order_id):
         
     data = request.json
     status = data.get('status')
-    if status in ['pending', 'preparing', 'completed', 'cancelled']:
+    if status in ['pending', 'preparing', 'served', 'completed', 'paid', 'cancelled']:
         db.update_order_status(order_id, status)
         return jsonify({'success': True})
     return jsonify({'error': 'Invalid status'}), 400
@@ -486,6 +496,10 @@ def api_create_waiter_call():
     if call_type not in ['waiter', 'bill']:
         return jsonify({'error': 'Invalid call type'}), 400
         
+    # If customer calls for the bill, update table status to 'billing'
+    if call_type == 'bill':
+        db.set_table_status(table_id, 'billing')
+        
     call_id = db.create_waiter_call(restaurant_id, table_id, call_type)
     return jsonify({'success': True, 'call_id': call_id})
 
@@ -496,6 +510,52 @@ def api_resolve_waiter_call(call_id):
         
     db.resolve_waiter_call(call_id)
     return jsonify({'success': True})
+
+# --- INVOICING, BILLING & ANALYTICS APIs ---
+
+@app.route('/api/restaurant/table/invoice/<int:table_id>')
+def api_get_table_invoice(table_id):
+    if not session.get('restaurant_id'):
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    items = db.get_table_invoice(table_id)
+    invoice_items = []
+    subtotal = 0
+    
+    for row in items:
+        invoice_items.append({
+            'name': row['item_name'],
+            'quantity': row['quantity'],
+            'price': row['price'],
+            'total': row['item_total']
+        })
+        subtotal += row['item_total']
+        
+    vat = subtotal * 0.15 # 15% VAT
+    grand_total = subtotal + vat
+    
+    return jsonify({
+        'items': invoice_items,
+        'subtotal': subtotal,
+        'vat': vat,
+        'grand_total': grand_total
+    })
+
+@app.route('/api/restaurant/table/checkout/<int:table_id>', methods=['POST'])
+def api_checkout_table(table_id):
+    if not session.get('restaurant_id'):
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    success = db.checkout_table(table_id)
+    return jsonify({'success': success})
+
+@app.route('/api/restaurant/analytics')
+def api_get_analytics():
+    if not session.get('restaurant_id'):
+        return jsonify({'error': 'Unauthorized'}), 401
+        
+    analytics = db.get_sales_analytics(session['restaurant_id'])
+    return jsonify(analytics)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

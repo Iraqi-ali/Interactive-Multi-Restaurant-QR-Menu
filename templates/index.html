@@ -39,9 +39,9 @@
     </div>
 </section>
 
-<div class="auth-grid">
+<div class="auth-grid" id="auth-section" style="display: none; margin-top: 40px; grid-template-columns: 1fr; justify-content: center; max-width: 600px; margin-left: auto; margin-right: auto;">
     <!-- Register Card -->
-    <div class="glass-card" id="register">
+    <div class="glass-card auth-card" id="register" style="display: none; width: 100%;">
         <h2 class="section-title"><i class="fa-solid fa-user-plus" style="color: var(--accent-color);"></i> تسجيل مطعم جديد</h2>
         <form action="/register" method="POST" enctype="multipart/form-data">
             <div class="form-group">
@@ -70,7 +70,7 @@
     </div>
     
     <!-- Login Card -->
-    <div class="glass-card" id="login">
+    <div class="glass-card auth-card" id="login" style="display: none; width: 100%;">
         <h2 class="section-title"><i class="fa-solid fa-right-to-bracket" style="color: var(--accent-color);"></i> تسجيل الدخول</h2>
         <form action="/login" method="POST">
             <div class="form-group">
@@ -118,4 +118,82 @@
         {% endfor %}
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function showAuthForm(formId) {
+        const authSection = document.getElementById('auth-section');
+        const registerCard = document.getElementById('register');
+        const loginCard = document.getElementById('login');
+        
+        // Show container
+        authSection.style.display = 'grid';
+        
+        if (formId === 'register') {
+            registerCard.style.display = 'block';
+            loginCard.style.display = 'none';
+            registerCard.scrollIntoView({ behavior: 'smooth' });
+        } else if (formId === 'login') {
+            loginCard.style.display = 'block';
+            registerCard.style.display = 'none';
+            loginCard.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        // Hero buttons
+        const heroRegisterBtn = document.querySelector('a[href="#register"]');
+        const heroLoginBtn = document.querySelector('a[href="#login"]');
+        
+        // Navbar buttons
+        const navRegisterBtn = document.querySelector('a[href="/#register"]');
+        const navLoginBtn = document.querySelector('a[href="/#login"]');
+        
+        if (heroRegisterBtn) {
+            heroRegisterBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                showAuthForm('register');
+            });
+        }
+        if (heroLoginBtn) {
+            heroLoginBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                showAuthForm('login');
+            });
+        }
+        if (navRegisterBtn) {
+            navRegisterBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                showAuthForm('register');
+            });
+        }
+        if (navLoginBtn) {
+            navLoginBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                showAuthForm('login');
+            });
+        }
+        
+        // Check hash or redirects on load
+        const hash = window.location.hash;
+        if (hash === '#register') {
+            showAuthForm('register');
+        } else if (hash === '#login') {
+            showAuthForm('login');
+        }
+        
+        // Handle failed actions displaying errors
+        const hasFlashes = document.querySelector('.flash-messages');
+        if (hasFlashes) {
+            if (window.location.href.includes('_anchor=login') || window.location.hash === '#login') {
+                showAuthForm('login');
+            } else if (window.location.href.includes('_anchor=register') || window.location.hash === '#register') {
+                showAuthForm('register');
+            } else {
+                showAuthForm('login'); // default fallback
+            }
+        }
+    });
+</script>
 {% endblock %}

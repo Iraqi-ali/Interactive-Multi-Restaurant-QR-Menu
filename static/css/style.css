@@ -1245,3 +1245,155 @@ body {
         grid-template-columns: 1fr;
     }
 }
+
+/* ==========================================
+   Windows 11 Fluent UI Styles
+   ========================================== */
+.win11-window {
+    background: var(--win11-bg);
+    backdrop-filter: blur(20px) saturate(125%);
+    -webkit-backdrop-filter: blur(20px) saturate(125%);
+    border: 1px solid var(--win11-border);
+    border-radius: var(--win11-radius);
+    box-shadow: var(--win11-shadow);
+    overflow: hidden;
+    margin-bottom: 25px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    transition: transform 0.2s cubic-bezier(0.1, 0.9, 0.2, 1);
+}
+
+.win11-window-header {
+    background: var(--win11-titlebar-bg);
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--win11-border);
+    user-select: none;
+}
+
+.win11-window-title {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.win11-window-controls {
+    display: flex;
+    gap: 15px;
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+
+.win11-window-controls span {
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+.win11-window-controls span:hover {
+    color: var(--text-primary);
+}
+
+.win11-window-controls span.win-close:hover {
+    color: var(--danger-color);
+}
+
+.win11-window-body {
+    padding: 24px;
+    max-height: calc(100vh - 180px);
+    overflow-y: auto;
+}
+
+/* System Action Tray notifications */
+.win11-notification-tray {
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
+    width: 340px;
+    max-height: 450px;
+    overflow-y: auto;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    pointer-events: none;
+}
+
+.win11-toast {
+    background: rgba(20, 20, 35, 0.95);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    border: 1px solid var(--win11-border);
+    border-top: 3px solid var(--win11-accent);
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    transform: translateX(-120%);
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.1, 0.9, 0.2, 1);
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.win11-toast.show {
+    transform: translateX(0);
+    opacity: 1;
+}
+
+.win11-toast-header {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text-primary);
+    font-family: var(--font-heading);
+}
+
+.win11-toast-body {
+    font-size: 12px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+/* Sidebar and Cards W11 Fluent */
+.desktop-card {
+    background: rgba(255, 255, 255, 0.01) !important;
+    border: 1px solid var(--win11-border) !important;
+    border-radius: 8px !important;
+    box-shadow: none !important;
+}
+
+.desktop-card:hover {
+    border-color: var(--win11-active-border) !important;
+    background: rgba(255, 255, 255, 0.03) !important;
+}
+
+/* W11 Layout Responsive Override */
+@media (max-width: 768px) {
+    .win11-desktop {
+        grid-template-columns: 1fr;
+    }
+    
+    .win11-sidebar {
+        flex-direction: row;
+        overflow-x: auto;
+        padding: 10px;
+        position: static;
+        top: auto;
+    }
+    
+    .win11-sidebar-btn {
+        padding: 8px 12px;
+        white-space: nowrap;
+    }
+    
+    .win11-sidebar-btn.active {
+        border-right: none;
+        border-bottom: 3px solid var(--win11-accent);
+    }
+}

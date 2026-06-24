@@ -10,6 +10,8 @@
     }
     body {
         padding-top: 15px;
+        background-attachment: fixed;
+        background-size: cover;
     }
     .main-content {
         padding: 0 15px 100px 15px !important;
@@ -103,6 +105,18 @@
         color: var(--text-primary);
         font-weight: bold;
     }
+    
+    /* Table state colors */
+    .client-status-indicator {
+        font-size: 12px;
+        font-weight: bold;
+        padding: 4px 10px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+    }
 </style>
 {% endblock %}
 
@@ -120,6 +134,17 @@
         <div class="table-badge-indicator">
             <i class="fa-solid fa-chair"></i> طاولة رقم {{ table.table_number }}
         </div>
+        
+        <!-- Table state indication -->
+        <div>
+            {% if table.status == 'available' %}
+                <span class="client-status-indicator" style="background: rgba(0, 230, 118, 0.1); color: var(--success-color);"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--success-color); display: inline-block;"></span> جلسة جديدة</span>
+            {% elif table.status == 'occupied' %}
+                <span class="client-status-indicator" style="background: rgba(0, 120, 212, 0.1); color: #00bcf2;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #00bcf2; display: inline-block;"></span> جلسة نشطة - قيد الخدمة</span>
+            {% elif table.status == 'billing' %}
+                <span class="client-status-indicator" style="background: rgba(255, 23, 68, 0.1); color: var(--danger-color); animation: blinker-animation 1.5s infinite;"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--danger-color); display: inline-block;"></span> بانتظار الفاتورة والدفع كاش</span>
+            {% endif %}
+        </div>
     </div>
     
     <!-- Quick Actions (Call waiter, Request bill) -->
@@ -127,9 +152,15 @@
         <button class="btn btn-secondary" onclick="sendWaiterCall('waiter')">
             <i class="fa-solid fa-bell"></i> استدعاء النادل
         </button>
-        <button class="btn btn-secondary" onclick="sendWaiterCall('bill')">
-            <i class="fa-solid fa-receipt"></i> طلب الفاتورة
-        </button>
+        {% if table.id != 0 %}
+            <button class="btn btn-secondary" onclick="requestBillDetails()">
+                <i class="fa-solid fa-receipt"></i> طلب الفاتورة وتفاصيل الحساب
+            </button>
+        {% else %}
+            <button class="btn btn-secondary" style="opacity: 0.5;" disabled>
+                <i class="fa-solid fa-receipt"></i> تصفح فقط
+            </button>
+        {% endif %}
     </div>
     
     <!-- Horizontal Categories Slider -->
@@ -150,14 +181,16 @@
                 <div class="customer-item-price-row">
                     <span class="customer-item-price">{{ item.price }} ر.س</span>
                     
-                    {% if item.available == 1 %}
+                    {% if item.available == 1 and table.id != 0 %}
                         <div class="qty-controls" id="controls-{{ item.id }}">
                             <button class="qty-btn" onclick="addToCart({{ item.id }}, '{{ item.name }}', {{ item.price }}, -1)">-</button>
                             <span class="qty-val" id="qty-{{ item.id }}">0</span>
                             <button class="qty-btn" onclick="addToCart({{ item.id }}, '{{ item.name }}', {{ item.price }}, 1)">+</button>
                         </div>
+                    {% elif table.id == 0 %}
+                        <span style="color: var(--text-secondary); font-size: 11px;"><i class="fa-solid fa-eye"></i> تصفح فقط</span>
                     {% else %}
-                        <span style="color: var(--danger-color); font-size: 12px; font-weight: bold;"><i class="fa-solid fa-ban"></i> غير متوفر</span>
+                        <span style="color: var(--danger-color); font-size: 11px; font-weight: bold;"><i class="fa-solid fa-ban"></i> غير متوفر</span>
                     {% endif %}
                 </div>
             </div>
@@ -207,7 +240,7 @@
                 <span id="modal-cart-total" style="color: var(--success-color);">0.00 ر.س</span>
             </div>
             <div style="font-size: 11px; color: var(--text-secondary); margin-top: 10px; text-align: center;">
-                <i class="fa-solid fa-circle-info"></i> الدفع كاش أو شبكة عند الطاولة بعد استلام وجبتك.
+                <i class="fa-solid fa-circle-info"></i> الدفع نقداً (كاش) أو شبكة عند الطاولة بعد استلام طلبك.
             </div>
         </div>
         
@@ -233,8 +266,8 @@
                 <div class="step" id="step-preparing">
                     2 <span class="step-label">يتم التحضير</span>
                 </div>
-                <div class="step" id="step-completed">
-                    3 <span class="step-label">جاهز للتقديم</span>
+                <div class="step" id="step-served">
+                    3 <span class="step-label">تم التقديم</span>
                 </div>
             </div>
             
@@ -243,6 +276,52 @@
             </div>
         </div>
         <button class="btn btn-secondary" style="width: 100%;" onclick="closeTrackerModal()"><i class="fa-solid fa-circle-xmark"></i> إغلاق شاشة التتبع</button>
+    </div>
+</div>
+
+<!-- CUSTOMER BILL/INVOICE MODAL -->
+<div id="customer-bill-modal" class="modal">
+    <div class="modal-content" style="max-width: 420px;">
+        <button class="modal-close" onclick="closeModal('customer-bill-modal')">&times;</button>
+        <h3 class="modal-title" style="border-bottom: 1px dashed var(--glass-border); padding-bottom: 10px;"><i class="fa-solid fa-file-invoice-dollar"></i> تفاصيل الحساب الحالي</h3>
+        
+        <div class="modal-body" style="font-size: 13px;">
+            <div style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;">
+                <table style="width: 100%; border-collapse: collapse; text-align: right;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--glass-border); color: var(--text-secondary); font-size: 12px;">
+                            <th style="padding: 6px 0;">الوجبة</th>
+                            <th style="padding: 6px 0; text-align: center;">الكمية</th>
+                            <th style="padding: 6px 0; text-align: left;">السعر</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bill-items-body">
+                        <!-- Filled dynamically -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div style="background: rgba(0, 0, 0, 0.2); padding: 12px; border-radius: 8px; display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span>المجموع الفرعي</span>
+                    <span id="bill-subtotal">0.00 ر.س</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; color: var(--text-secondary);">
+                    <span>ضريبة القيمة المضافة (15%)</span>
+                    <span id="bill-vat">0.00 ر.س</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; border-top: 1px solid var(--glass-border); padding-top: 8px; color: var(--success-color);">
+                    <span>المجموع الإجمالي</span>
+                    <span id="bill-total">0.00 ر.س</span>
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px; text-align: center; color: var(--warning-color); font-weight: bold;">
+                <i class="fa-solid fa-hourglass-half"></i> ننتظر النادل لاستلام الكاش وتصفير الطاولة...
+            </div>
+        </div>
+        
+        <button class="btn btn-secondary" style="width: 100%;" onclick="closeModal('customer-bill-modal')">إغلاق الفاتورة</button>
     </div>
 </div>
 
@@ -255,7 +334,6 @@
 
 {% block extra_js %}
 <script>
-    // Cart Global State
     let cart = {};
     const restaurantId = {{ restaurant.id }};
     const tableId = {{ table.id }};
@@ -269,14 +347,12 @@
             updateUI();
         }
         
-        // Check if there is an active order being tracked
         const trackedOrderId = localStorage.getItem(`tracked_order_${restaurantId}_${tableId}`);
         if (trackedOrderId) {
             startTrackingOrder(trackedOrderId);
         }
     });
     
-    // Categories filtering
     function filterCategory(catClass, btn) {
         document.querySelectorAll('.category-slider-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
@@ -294,39 +370,31 @@
         }
     }
     
-    // Add to Cart
     function addToCart(id, name, price, qtyChange) {
         if (!cart[id]) {
             cart[id] = { id: id, name: name, price: price, quantity: 0 };
         }
-        
         cart[id].quantity += qtyChange;
-        
         if (cart[id].quantity <= 0) {
             delete cart[id];
         }
-        
         localStorage.setItem(`cart_${restaurantId}_${tableId}`, JSON.stringify(cart));
         updateUI();
     }
     
-    // Update Cart UI
     function updateUI() {
         let totalItems = 0;
         let totalPrice = 0;
         
-        // Reset all item inputs
         document.querySelectorAll('.qty-val').forEach(span => span.innerText = '0');
         
         Object.values(cart).forEach(item => {
             totalItems += item.quantity;
             totalPrice += item.price * item.quantity;
-            
             const span = document.getElementById(`qty-${item.id}`);
             if (span) span.innerText = item.quantity;
         });
         
-        // Update floating cart footer
         const cartFooter = document.getElementById('floating-cart');
         if (totalItems > 0) {
             cartFooter.style.display = 'block';
@@ -337,11 +405,9 @@
         }
     }
     
-    // Open Cart Modal
     function openCartModal() {
         const modal = document.getElementById('cart-modal');
         const container = document.getElementById('cart-items-details');
-        
         let html = '';
         let totalPrice = 0;
         
@@ -354,7 +420,6 @@
         items.forEach(item => {
             const itemTotal = item.price * item.quantity;
             totalPrice += itemTotal;
-            
             html += `
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px 15px; border-radius: 8px;">
                     <div>
@@ -379,14 +444,13 @@
         const name = cart[id].name;
         const price = cart[id].price;
         addToCart(id, name, price, change);
-        openCartModal(); // Refresh modal view
+        openCartModal();
     }
     
     function closeModal(id) {
         document.getElementById(id).style.display = 'none';
     }
     
-    // Submit Order
     async function submitOrder() {
         const items = Object.values(cart);
         if (items.length === 0) return;
@@ -411,7 +475,6 @@
             
             const result = await response.json();
             if (response.ok) {
-                // Clear cart
                 cart = {};
                 localStorage.removeItem(`cart_${restaurantId}_${tableId}`);
                 updateUI();
@@ -420,24 +483,22 @@
                 // Show tracking modal and save order id to track
                 localStorage.setItem(`tracked_order_${restaurantId}_${tableId}`, result.order_id);
                 startTrackingOrder(result.order_id);
+                
+                // Reload page in 3 seconds to update table state indicator
+                setTimeout(() => location.reload(), 3000);
             } else {
                 alert('خطأ في إرسال الطلب: ' + result.error);
             }
         } catch (e) {
             console.error("Order error:", e);
-            alert('حدث خطأ في الاتصال بالخادم، يرجى المحاولة مرة أخرى.');
         }
     }
     
-    // Order Tracking Logic
     let trackingInterval = null;
-    
     function startTrackingOrder(orderId) {
         document.getElementById('tracker-order-id').innerText = `#${orderId}`;
         document.getElementById('tracker-modal').style.display = 'flex';
-        
         trackOrderAPI(orderId);
-        
         if (trackingInterval) clearInterval(trackingInterval);
         trackingInterval = setInterval(() => trackOrderAPI(orderId), 4000);
     }
@@ -446,34 +507,29 @@
         try {
             const res = await fetch(`/api/order/status/${orderId}`);
             const data = await res.json();
-            
             if (!res.ok) {
                 stopTracking();
                 return;
             }
-            
             updateTrackerUI(data.status);
-            
-            // If completed or cancelled, stop polling
-            if (data.status === 'completed' || data.status === 'cancelled') {
+            if (data.status === 'served' || data.status === 'completed' || data.status === 'paid' || data.status === 'cancelled') {
                 stopTracking();
             }
         } catch (e) {
-            console.error("Error tracking order:", e);
+            console.error(e);
         }
     }
     
     function updateTrackerUI(status) {
         const stepPending = document.getElementById('step-pending');
         const stepPreparing = document.getElementById('step-preparing');
-        const stepCompleted = document.getElementById('step-completed');
+        const stepServed = document.getElementById('step-served');
         const progressBar = document.getElementById('stepper-progress');
         const desc = document.getElementById('tracker-status-description');
         
-        // Reset classes
         stepPending.className = 'step';
         stepPreparing.className = 'step';
-        stepCompleted.className = 'step';
+        stepServed.className = 'step';
         
         if (status === 'pending') {
             stepPending.classList.add('active');
@@ -484,13 +540,12 @@
             stepPreparing.classList.add('active');
             progressBar.style.width = '50%';
             desc.innerHTML = '🍳 يتم طهي وتجهيز وجبتك الآن!';
-        } else if (status === 'completed') {
+        } else if (status === 'served' || status === 'completed' || status === 'paid') {
             stepPending.classList.add('completed');
             stepPreparing.classList.add('completed');
-            stepCompleted.classList.add('completed');
+            stepServed.classList.add('completed');
             progressBar.style.width = '100%';
-            desc.innerHTML = '🍽️ الوجبة جاهزة وتقدم إليك الآن! بالعافية 🥰';
-            // Clear tracking from localstorage since it's completed
+            desc.innerHTML = '🍽️ الوجبة جاهزة وقدمت إليك! بالعافية 🥰';
             localStorage.removeItem(`tracked_order_${restaurantId}_${tableId}`);
         } else if (status === 'cancelled') {
             desc.innerHTML = '❌ نعتذر منك، تم إلغاء الطلب من قبل المطبخ.';
@@ -510,7 +565,6 @@
         stopTracking();
     }
     
-    // Send Waiter / Bill call
     async function sendWaiterCall(type) {
         try {
             const res = await fetch('/api/waiter-call/create', {
@@ -523,21 +577,60 @@
                     type: type
                 })
             });
-            
             if (res.ok) {
                 showToast(type === 'waiter' ? 'تم استدعاء النادل بنجاح!' : 'تم طلب الفاتورة بنجاح!');
+                if (type === 'bill') {
+                    // Reload to update table state indicator
+                    setTimeout(() => location.reload(), 2000);
+                }
             }
         } catch (e) {
-            console.error("Waiter call error:", e);
+            console.error(e);
+        }
+    }
+
+    // Customer Invoice details fetch & modal display
+    async function requestBillDetails() {
+        try {
+            const res = await fetch(`/api/restaurant/table/invoice/${tableId}`);
+            const data = await res.json();
+            
+            const tbody = document.getElementById('bill-items-body');
+            tbody.innerHTML = '';
+            
+            if (data.items.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 15px; color: var(--text-secondary);">لا توجد طلبات جارية لتصفيها حالياً.</td></tr>';
+            } else {
+                data.items.forEach(item => {
+                    tbody.innerHTML += `
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                            <td style="padding: 6px 0;">${item.name}</td>
+                            <td style="padding: 6px 0; text-align: center; font-weight: bold; color: var(--accent-color);">x${item.quantity}</td>
+                            <td style="padding: 6px 0; text-align: left;">${item.total.toFixed(2)} ر.س</td>
+                        </tr>
+                    `;
+                });
+            }
+            
+            document.getElementById('bill-subtotal').innerText = `${data.subtotal.toFixed(2)} ر.س`;
+            document.getElementById('bill-vat').innerText = `${data.vat.toFixed(2)} ر.س`;
+            document.getElementById('bill-total').innerText = `${data.grand_total.toFixed(2)} ر.س`;
+            
+            // Show Bill Modal
+            document.getElementById('customer-bill-modal').style.display = 'flex';
+            
+            // Send call to backend to request waiter
+            sendWaiterCall('bill');
+            
+        } catch (e) {
+            console.error("Error fetching bill details:", e);
         }
     }
     
-    // Toast Alert system
     function showToast(text) {
         const toast = document.getElementById('toast');
         document.getElementById('toast-text').innerText = text;
         toast.classList.add('show');
-        
         setTimeout(() => {
             toast.classList.remove('show');
         }, 3000);

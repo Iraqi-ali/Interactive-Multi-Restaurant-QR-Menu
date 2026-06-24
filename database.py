@@ -70,6 +70,8 @@ def init_db():
         table_number TEXT NOT NULL,
         token TEXT UNIQUE NOT NULL,
         qr_code_path TEXT,
+        status TEXT NOT NULL DEFAULT 'available', -- 'available', 'occupied', 'billing'
+        current_session_id TEXT,
         FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE
     )
     ''')
@@ -81,7 +83,8 @@ def init_db():
         restaurant_id INTEGER NOT NULL,
         table_id INTEGER NOT NULL,
         total_price REAL NOT NULL,
-        status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'preparing', 'completed', 'cancelled'
+        status TEXT NOT NULL DEFAULT 'pending', -- 'pending', 'preparing', 'served', 'paid', 'cancelled'
+        session_id TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
         FOREIGN KEY (table_id) REFERENCES tables(id) ON DELETE CASCADE
@@ -114,6 +117,20 @@ def init_db():
         FOREIGN KEY (table_id) REFERENCES tables(id) ON DELETE CASCADE
     )
     ''')
+    
+    # Run migrations for existing databases to ensure columns exist
+    try:
+        cursor.execute("ALTER TABLE tables ADD COLUMN status TEXT NOT NULL DEFAULT 'available'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE tables ADD COLUMN current_session_id TEXT")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE orders ADD COLUMN session_id TEXT")
+    except sqlite3.OperationalError:
+        pass
     
     # Create Default Super User if not exists
     cursor.execute("SELECT * FROM users WHERE username = 'admin'")
@@ -330,12 +347,12 @@ def delete_table(table_id):
     conn.close()
 
 # Order Actions
-def create_order(restaurant_id, table_id, total_price, items):
+def create_order(restaurant_id, table_id, total_price, items, session_id=None):
     conn = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("INSERT INTO orders (restaurant_id, table_id, total_price) VALUES (?, ?, ?)",
-                       (restaurant_id, table_id, total_price))
+        cursor.execute("INSERT INTO orders (restaurant_id, table_id, total_price, session_id) VALUES (?, ?, ?, ?)",
+                       (restaurant_id, table_id, total_price, session_id))
         order_id = cursor.lastrowid
         
         for item in items:
@@ -427,3 +444,123 @@ def resolve_waiter_call(call_id):
     cursor.execute("UPDATE waiter_calls SET status = 'resolved' WHERE id = ?", (call_id,))
     conn.commit()
     conn.close()
+
+def start_table_session(table_id, session_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE tables SET status = 'occupied', current_session_id = ? WHERE id = ?", (session_id, table_id))
+    conn.commit()
+    conn.close()
+
+def set_table_status(table_id, status):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE tables SET status = ? WHERE id = ?", (status, table_id))
+    conn.commit()
+    conn.close()
+
+def get_table_invoice(table_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT m.name as item_name, SUM(oi.quantity) as quantity, oi.price, SUM(oi.quantity * oi.price) as item_total
+        FROM orders o
+        JOIN order_items oi ON oi.order_id = o.id
+        JOIN menu_items m ON oi.menu_item_id = m.id
+        WHERE o.table_id = ? 
+          AND o.session_id = (SELECT current_session_id FROM tables WHERE id = ?)
+          AND o.status != 'cancelled'
+        GROUP BY oi.menu_item_id, oi.price
+    """, (table_id, table_id))
+    items = cursor.fetchall()
+    conn.close()
+    return items
+
+def checkout_table(table_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        # Get current session id
+        cursor.execute("SELECT current_session_id FROM tables WHERE id = ?", (table_id,))
+        row = cursor.fetchone()
+        if row and row['current_session_id']:
+            session_id = row['current_session_id']
+            # 1. Update all orders of this session to 'paid'
+            cursor.execute("UPDATE orders SET status = 'paid' WHERE table_id = ? AND session_id = ?", (table_id, session_id))
+            # 2. Resolve waiter calls for this table
+            cursor.execute("UPDATE waiter_calls SET status = 'resolved' WHERE table_id = ? AND status = 'active'", (table_id,))
+        
+        # 3. Reset table status to 'available' and clear session
+        cursor.execute("UPDATE tables SET status = 'available', current_session_id = NULL WHERE id = ?", (table_id,))
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+def get_sales_analytics(restaurant_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # 1. Daily Sales
+    cursor.execute("""
+        SELECT COALESCE(SUM(total_price), 0) FROM orders 
+        WHERE restaurant_id = ? AND (status = 'paid' OR status = 'completed') 
+          AND date(created_at) = date('now', 'localtime')
+    """, (restaurant_id,))
+    daily_sales = cursor.fetchone()[0]
+    
+    # 2. Monthly Sales
+    cursor.execute("""
+        SELECT COALESCE(SUM(total_price), 0) FROM orders 
+        WHERE restaurant_id = ? AND (status = 'paid' OR status = 'completed') 
+          AND strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now', 'localtime')
+    """, (restaurant_id,))
+    monthly_sales = cursor.fetchone()[0]
+    
+    # 3. Sales by Category
+    cursor.execute("""
+        SELECT c.name as category_name, SUM(oi.quantity * oi.price) as total_sales
+        FROM order_items oi
+        JOIN menu_items m ON oi.menu_item_id = m.id
+        JOIN categories c ON m.category_id = c.id
+        JOIN orders o ON oi.order_id = o.id
+        WHERE o.restaurant_id = ? AND (o.status = 'paid' OR o.status = 'completed')
+        GROUP BY c.id
+    """, (restaurant_id,))
+    category_sales = [dict(row) for row in cursor.fetchall()]
+    
+    # 4. Top 5 Items
+    cursor.execute("""
+        SELECT m.name as item_name, SUM(oi.quantity) as total_quantity
+        FROM order_items oi
+        JOIN menu_items m ON oi.menu_item_id = m.id
+        JOIN orders o ON oi.order_id = o.id
+        WHERE o.restaurant_id = ? AND (o.status = 'paid' OR o.status = 'completed')
+        GROUP BY m.id
+        ORDER BY total_quantity DESC
+        LIMIT 5
+    """, (restaurant_id,))
+    top_items = [dict(row) for row in cursor.fetchall()]
+    
+    # 5. Last 30 Days Sales trend
+    cursor.execute("""
+        SELECT date(created_at) as sale_date, SUM(total_price) as total_sales
+        FROM orders
+        WHERE restaurant_id = ? AND (status = 'paid' OR status = 'completed')
+          AND created_at >= date('now', '-30 days')
+        GROUP BY sale_date
+        ORDER BY sale_date ASC
+    """, (restaurant_id,))
+    sales_trend = [dict(row) for row in cursor.fetchall()]
+    
+    conn.close()
+    return {
+        'daily_sales': daily_sales,
+        'monthly_sales': monthly_sales,
+        'category_sales': category_sales,
+        'top_items': top_items,
+        'sales_trend': sales_trend
+    }
