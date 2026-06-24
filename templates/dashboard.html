@@ -37,7 +37,7 @@
     /* Desktop Environment Layout */
     .win11-desktop {
         display: grid;
-        grid-template-columns: 240px 1fr;
+        grid-template-columns: 80px 1fr;
         gap: 20px;
         min-height: calc(100vh - 120px);
         margin-top: 10px;
@@ -50,32 +50,35 @@
         -webkit-backdrop-filter: blur(25px);
         border: 1px solid var(--win11-border);
         border-radius: var(--win11-radius);
-        padding: 20px 10px;
+        padding: 20px 8px;
         box-shadow: var(--win11-shadow);
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 12px;
         height: fit-content;
         position: sticky;
         top: 85px;
+        align-items: center;
     }
 
     .win11-sidebar-btn {
         display: flex;
         align-items: center;
-        gap: 12px;
-        padding: 10px 16px;
-        border-radius: 6px;
+        justify-content: center;
+        padding: 12px;
+        border-radius: 8px;
         color: var(--text-secondary);
-        font-family: var(--font-main);
-        font-weight: 500;
-        font-size: 14px;
         background: transparent;
         border: none;
-        width: 100%;
-        text-align: right;
+        width: 48px;
+        height: 48px;
         cursor: pointer;
         transition: all 0.2s ease;
+        position: relative;
+    }
+
+    .win11-sidebar-btn i {
+        font-size: 20px;
     }
 
     .win11-sidebar-btn:hover {
@@ -84,10 +87,9 @@
     }
 
     .win11-sidebar-btn.active {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.15);
         color: var(--text-primary);
         border-right: 3px solid var(--win11-accent);
-        font-weight: 600;
     }
 
     /* Windowed Panels */
@@ -411,23 +413,23 @@
 <div class="win11-desktop">
     <!-- Floating Windows 11 Sidebar Menu -->
     <div class="win11-sidebar">
-        <button class="win11-sidebar-btn active" onclick="switchPanel('overview-panel', this)">
-            <i class="fa-solid fa-house"></i> الرئيسية
+        <button class="win11-sidebar-btn active" onclick="switchPanel('overview-panel', this)" title="الرئيسية">
+            <i class="fa-solid fa-house"></i>
         </button>
-        <button class="win11-sidebar-btn" onclick="switchPanel('orders-panel', this)">
-            <i class="fa-solid fa-bell"></i> الطلبات الحية
+        <button class="win11-sidebar-btn" onclick="switchPanel('orders-panel', this)" title="الطلبات الحية">
+            <i class="fa-solid fa-bell"></i>
         </button>
-        <button class="win11-sidebar-btn" onclick="switchPanel('tables-panel', this)">
-            <i class="fa-solid fa-chair"></i> إدارة الطاولات
+        <button class="win11-sidebar-btn" onclick="switchPanel('tables-panel', this)" title="إدارة الطاولات">
+            <i class="fa-solid fa-chair"></i>
         </button>
-        <button class="win11-sidebar-btn" onclick="switchPanel('menu-panel', this)">
-            <i class="fa-solid fa-cookie-bite"></i> إدارة المنيو
+        <button class="win11-sidebar-btn" onclick="switchPanel('menu-panel', this)" title="إدارة المنيو">
+            <i class="fa-solid fa-cookie-bite"></i>
         </button>
-        <button class="win11-sidebar-btn" onclick="switchPanel('analytics-panel', this)">
-            <i class="fa-solid fa-chart-pie"></i> التحليلات المالية
+        <button class="win11-sidebar-btn" onclick="switchPanel('analytics-panel', this)" title="التحليلات المالية">
+            <i class="fa-solid fa-chart-pie"></i>
         </button>
-        <button class="win11-sidebar-btn" onclick="switchPanel('settings-panel', this)">
-            <i class="fa-solid fa-sliders"></i> إعدادات المظهر والمطعم
+        <button class="win11-sidebar-btn" onclick="switchPanel('settings-panel', this)" title="إعدادات المظهر والمطعم">
+            <i class="fa-solid fa-sliders"></i>
         </button>
     </div>
     
@@ -637,23 +639,25 @@
                                 <span class="table-location-badge">{{ table.location }}</span>
                             </div>
 
-                            <!-- Seating graphic layout -->
-                            <div class="visual-table-container">
-                                <div class="visual-table {% if table.capacity > 4 %}rectangular{% endif %}">
-                                    <span style="font-size: 14px; font-weight: 900; color: #fff;">{{ table.table_number }}</span>
-                                    <span style="font-size: 8px; opacity: 0.7;">{{ table.capacity }} مقاعد</span>
+                            <!-- Seating graphic & QR side-by-side -->
+                            <div style="display: flex; align-items: center; justify-content: space-around; gap: 10px; margin: 15px 0;">
+                                <div class="visual-table-container" style="margin: 0; width: 110px; height: 110px;">
+                                    <div class="visual-table {% if table.capacity > 4 %}rectangular{% endif %}" style="width: 60px; height: 60px; border-width: 3px;">
+                                        <span style="font-size: 11px; font-weight: 900; color: #fff;">{{ table.table_number }}</span>
+                                        <span style="font-size: 7px; opacity: 0.7;">{{ table.capacity }} مقاعد</span>
+                                    </div>
+                                    {% for i in range(table.capacity) %}
+                                    <div class="visual-chair" style="width: 12px; height: 12px; margin-top: -6px; margin-left: -6px; transform: rotate(calc({{ i }} * (360deg / {{ table.capacity }}))) translateY(-40px);"></div>
+                                    {% endfor %}
                                 </div>
-                                {% for i in range(table.capacity) %}
-                                <div class="visual-chair" style="transform: rotate(calc({{ i }} * (360deg / {{ table.capacity }}))) translateY(-52px);"></div>
-                                {% endfor %}
-                            </div>
-                            
-                            <div class="qr-preview-container" style="margin-bottom: 12px; display: none;">
-                                {% if table.qr_code_path %}
-                                    <img src="{{ url_for('static', filename='qrcodes/' + table.qr_code_path) }}" alt="QR" class="qr-preview-img">
-                                {% else %}
-                                    <div style="color: #ccc;"><i class="fa-solid fa-qrcode fa-3x"></i></div>
-                                {% endif %}
+                                
+                                <div class="qr-preview-container" style="margin: 0; display: flex; align-items: center; justify-content: center;">
+                                    {% if table.qr_code_path %}
+                                        <img src="{{ url_for('static', filename='qrcodes/' + table.qr_code_path) }}" alt="QR" class="qr-preview-img" style="width: 80px; height: 80px; border-radius: 8px; border: 2px solid rgba(255, 255, 255, 0.1); background: white; padding: 4px; box-shadow: 0 4px 10px rgba(0,0,0,0.3);">
+                                    {% else %}
+                                        <div style="color: #ccc; width: 80px; height: 80px; border-radius: 8px; border: 2px solid rgba(255, 255, 255, 0.1); background: rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-qrcode fa-2x"></i></div>
+                                    {% endif %}
+                                </div>
                             </div>
 
                             <div style="margin-bottom: 12px;">
