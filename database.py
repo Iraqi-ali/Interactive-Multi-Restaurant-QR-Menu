@@ -34,6 +34,11 @@ def init_db():
         slug TEXT UNIQUE NOT NULL,
         logo TEXT,
         status TEXT NOT NULL DEFAULT 'active', -- 'active', 'pending', 'inactive'
+        theme_name TEXT NOT NULL DEFAULT 'classic_light', -- 'classic_light', 'modern_dark', 'luxury_gold', 'custom'
+        theme_primary_color TEXT DEFAULT '#059669',
+        theme_bg_color TEXT DEFAULT '#f8fafc',
+        theme_surface_color TEXT DEFAULT '#ffffff',
+        theme_text_color TEXT DEFAULT '#1e293b',
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
     ''')
@@ -129,6 +134,26 @@ def init_db():
         pass
     try:
         cursor.execute("ALTER TABLE orders ADD COLUMN session_id TEXT")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE restaurants ADD COLUMN theme_name TEXT NOT NULL DEFAULT 'classic_light'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE restaurants ADD COLUMN theme_primary_color TEXT DEFAULT '#059669'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE restaurants ADD COLUMN theme_bg_color TEXT DEFAULT '#f8fafc'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE restaurants ADD COLUMN theme_surface_color TEXT DEFAULT '#ffffff'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE restaurants ADD COLUMN theme_text_color TEXT DEFAULT '#1e293b'")
     except sqlite3.OperationalError:
         pass
     
@@ -508,7 +533,7 @@ def get_sales_analytics(restaurant_id):
     cursor.execute("""
         SELECT COALESCE(SUM(total_price), 0) FROM orders 
         WHERE restaurant_id = ? AND (status = 'paid' OR status = 'completed') 
-          AND date(created_at) = date('now', 'localtime')
+          AND date(created_at, 'localtime') = date('now', 'localtime')
     """, (restaurant_id,))
     daily_sales = cursor.fetchone()[0]
     
@@ -516,7 +541,7 @@ def get_sales_analytics(restaurant_id):
     cursor.execute("""
         SELECT COALESCE(SUM(total_price), 0) FROM orders 
         WHERE restaurant_id = ? AND (status = 'paid' OR status = 'completed') 
-          AND strftime('%Y-%m', created_at) = strftime('%Y-%m', 'now', 'localtime')
+          AND strftime('%Y-%m', created_at, 'localtime') = strftime('%Y-%m', 'now', 'localtime')
     """, (restaurant_id,))
     monthly_sales = cursor.fetchone()[0]
     
@@ -547,10 +572,10 @@ def get_sales_analytics(restaurant_id):
     
     # 5. Last 30 Days Sales trend
     cursor.execute("""
-        SELECT date(created_at) as sale_date, SUM(total_price) as total_sales
+        SELECT date(created_at, 'localtime') as sale_date, SUM(total_price) as total_sales
         FROM orders
         WHERE restaurant_id = ? AND (status = 'paid' OR status = 'completed')
-          AND created_at >= date('now', '-30 days')
+          AND created_at >= date('now', '-30 days', 'localtime')
         GROUP BY sale_date
         ORDER BY sale_date ASC
     """, (restaurant_id,))
@@ -564,3 +589,21 @@ def get_sales_analytics(restaurant_id):
         'top_items': top_items,
         'sales_trend': sales_trend
     }
+
+def update_restaurant_settings(restaurant_id, name, theme_name, primary_color, bg_color, surface_color, text_color, logo=None):
+    conn = get_db()
+    cursor = conn.cursor()
+    if logo:
+        cursor.execute("""
+            UPDATE restaurants 
+            SET name = ?, theme_name = ?, theme_primary_color = ?, theme_bg_color = ?, theme_surface_color = ?, theme_text_color = ?, logo = ?
+            WHERE id = ?
+        """, (name, theme_name, primary_color, bg_color, surface_color, text_color, logo, restaurant_id))
+    else:
+        cursor.execute("""
+            UPDATE restaurants 
+            SET name = ?, theme_name = ?, theme_primary_color = ?, theme_bg_color = ?, theme_surface_color = ?, theme_text_color = ?
+            WHERE id = ?
+        """, (name, theme_name, primary_color, bg_color, surface_color, text_color, restaurant_id))
+    conn.commit()
+    conn.close()

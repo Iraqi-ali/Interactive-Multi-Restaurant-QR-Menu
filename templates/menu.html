@@ -4,6 +4,60 @@
 
 {% block extra_css %}
 <style>
+    :root {
+        {% if restaurant.theme_name == 'classic_light' %}
+        --bg-primary: #f8fafc;
+        --bg-secondary: #ffffff;
+        --accent-color: #059669;
+        --accent-gradient: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        --text-primary: #1e293b;
+        --text-secondary: #64748b;
+        --glass-bg: rgba(255, 255, 255, 0.85);
+        --glass-border: rgba(0, 0, 0, 0.08);
+        --card-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+        {% elif restaurant.theme_name == 'modern_dark' %}
+        --bg-primary: #0b0b14;
+        --bg-secondary: #121225;
+        --accent-color: #7c4dff;
+        --accent-gradient: linear-gradient(135deg, #7c4dff 0%, #ff4081 100%);
+        --text-primary: #f5f5f7;
+        --text-secondary: #a0aec0;
+        --glass-bg: rgba(18, 18, 37, 0.6);
+        --glass-border: rgba(255, 255, 255, 0.08);
+        --card-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        {% elif restaurant.theme_name == 'luxury_gold' %}
+        --bg-primary: #1c1917;
+        --bg-secondary: #292524;
+        --accent-color: #d97706;
+        --accent-gradient: linear-gradient(135deg, #d97706 0%, #f59e0b 100%);
+        --text-primary: #f5f5f4;
+        --text-secondary: #a8a29e;
+        --glass-bg: rgba(41, 37, 36, 0.7);
+        --glass-border: rgba(217, 119, 6, 0.15);
+        --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+        {% elif restaurant.theme_name == 'custom' %}
+        --accent-color: {{ restaurant.theme_primary_color or '#059669' }};
+        --accent-gradient: linear-gradient(135deg, {{ restaurant.theme_primary_color or '#059669' }} 0%, {{ restaurant.theme_primary_color or '#059669' }}dd 100%);
+        --bg-primary: {{ restaurant.theme_bg_color or '#f8fafc' }};
+        --bg-secondary: {{ restaurant.theme_surface_color or '#ffffff' }};
+        --text-primary: {{ restaurant.theme_text_color or '#1e293b' }};
+        --text-secondary: {{ restaurant.theme_text_color or '#1e293b' }}a0;
+        --glass-bg: {{ restaurant.theme_surface_color or '#ffffff' }}cc;
+        --glass-border: {{ restaurant.theme_primary_color or '#059669' }}22;
+        --card-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        {% endif %}
+    }
+
+    {% if restaurant.theme_name == 'classic_light' %}
+    .glass-bg-container {
+        display: none !important;
+    }
+    {% elif restaurant.theme_name == 'luxury_gold' %}
+    .circle-1 { background: #d97706 !important; opacity: 0.05 !important; }
+    .circle-2 { background: #d97706 !important; opacity: 0.03 !important; }
+    .circle-3 { display: none !important; }
+    {% endif %}
+
     /* Customize layout for customer view (hiding main header/footer since it's mobile-first) */
     .main-header, .main-footer {
         display: none !important;
@@ -592,7 +646,7 @@
     // Customer Invoice details fetch & modal display
     async function requestBillDetails() {
         try {
-            const res = await fetch(`/api/restaurant/table/invoice/${tableId}`);
+            const res = await fetch(`/api/restaurant/table/invoice/${tableId}?token=${tableToken}`);
             const data = await res.json();
             
             const tbody = document.getElementById('bill-items-body');

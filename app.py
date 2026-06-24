@@ -209,6 +209,61 @@ def restaurant_dashboard():
     
     return render_template('dashboard.html', restaurant=restaurant, categories=categories, menu_items=menu_items, tables=tables)
 
+@app.route('/dashboard/update-settings', methods=['POST'])
+def update_settings():
+    if not session.get('restaurant_id'):
+        return redirect(url_for('index'))
+        
+    restaurant_id = session['restaurant_id']
+    name = request.form.get('name').strip()
+    theme_name = request.form.get('theme_name')
+    theme_primary_color = request.form.get('theme_primary_color')
+    theme_bg_color = request.form.get('theme_bg_color')
+    theme_surface_color = request.form.get('theme_surface_color')
+    theme_text_color = request.form.get('theme_text_color')
+    
+    # Handle Logo Upload
+    logo_filename = None
+    logo_file = request.files.get('logo')
+    if logo_file and logo_file.filename != '':
+        if allowed_file(logo_file.filename):
+            # Try to delete the old logo if it exists
+            conn = db.get_db()
+            cursor = conn.cursor()
+            cursor.execute("SELECT logo FROM restaurants WHERE id = ?", (restaurant_id,))
+            row = cursor.fetchone()
+            if row and row['logo']:
+                try:
+                    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], row['logo']))
+                except:
+                    pass
+            conn.close()
+            
+            ext = logo_file.filename.rsplit('.', 1)[1].lower()
+            logo_filename = f"logo_{session['restaurant_slug']}_{uuid.uuid4().hex[:6]}.{ext}"
+            logo_file.save(os.path.join(app.config['UPLOAD_FOLDER'], logo_filename))
+        else:
+            flash("نوع ملف الشعار غير مدعوم.", "error")
+            return redirect(url_for('restaurant_dashboard'))
+            
+    if name:
+        db.update_restaurant_settings(
+            restaurant_id, 
+            name, 
+            theme_name, 
+            theme_primary_color, 
+            theme_bg_color, 
+            theme_surface_color, 
+            theme_text_color, 
+            logo_filename
+        )
+        session['restaurant_name'] = name
+        flash("تم حفظ إعدادات المظهر والبيانات بنجاح.", "success")
+    else:
+        flash("اسم المطعم لا يمكن أن يكون فارغاً.", "error")
+        
+    return redirect(url_for('restaurant_dashboard'))
+
 @app.route('/dashboard/add-category', methods=['POST'])
 def add_category():
     if not session.get('restaurant_id'):
@@ -515,7 +570,25 @@ def api_resolve_waiter_call(call_id):
 
 @app.route('/api/restaurant/table/invoice/<int:table_id>')
 def api_get_table_invoice(table_id):
-    if not session.get('restaurant_id'):
+    token = request.args.get('token')
+    authorized = False
+    
+    if session.get('restaurant_id'):
+        # Check if table belongs to this restaurant
+        conn = db.get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT restaurant_id FROM tables WHERE id = ?", (table_id,))
+        row = cursor.fetchone()
+        conn.close()
+        if row and row['restaurant_id'] == session['restaurant_id']:
+            authorized = True
+    elif token:
+        # Check if token matches this table
+        table = db.get_table_by_token(token)
+        if table and table['id'] == table_id:
+            authorized = True
+            
+    if not authorized:
         return jsonify({'error': 'Unauthorized'}), 401
         
     items = db.get_table_invoice(table_id)
