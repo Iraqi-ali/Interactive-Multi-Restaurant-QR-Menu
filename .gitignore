@@ -9,15 +9,6 @@ __pycache__/
 *.pyo
 *.pyd
 
-# SQLite Database
-database.db
-
-# Uploaded assets and generated QRs (ignore content, keep directory)
-static/uploads/*
-!static/uploads/.gitkeep
-static/qrcodes/*
-!static/qrcodes/.gitkeep
-
 # IDEs config
 .vscode/
 .idea/
