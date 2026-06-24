@@ -35,6 +35,206 @@
         --glass-bg: rgba(41, 37, 36, 0.7);
         --glass-border: rgba(217, 119, 6, 0.15);
         --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+        {% elif restaurant.theme_name == 'ocean_breeze' %}
+        --bg-primary: #f0f9ff;
+        --bg-secondary: #ffffff;
+        --accent-color: #0284c7;
+        --accent-gradient: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+        --text-primary: #0f172a;
+        --text-secondary: #64748b;
+        --glass-bg: rgba(255, 255, 255, 0.85);
+        --glass-border: rgba(2, 132, 199, 0.1);
+        --card-shadow: 0 8px 30px rgba(14, 165, 233, 0.05);
+        {% elif restaurant.theme_name == 'forest_fresh' %}
+        --bg-primary: #f0fdf4;
+        --bg-secondary: #ffffff;
+        --accent-color: #16a34a;
+        --accent-gradient: linear-gradient(135deg, #16a34a 0%, #4ade80 100%);
+        --text-primary: #14532d;
+        --text-secondary: #4f7a5b;
+        --glass-bg: rgba(255, 255, 255, 0.85);
+        --glass-border: rgba(22, 163, 74, 0.1);
+        --card-shadow: 0 8px 30px rgba(22, 163, 74, 0.04);
+        {% elif restaurant.theme_name == 'neon_cyber' %}
+        --bg-primary: #030303;
+        --bg-secondary: #0f0f16;
+        --accent-color: #ff007f;
+        --accent-gradient: linear-gradient(135deg, #ff007f 0%, #39ff14 100%);
+        --text-primary: #ffffff;
+        --text-secondary: #8b8b9c;
+        --glass-bg: rgba(15, 15, 22, 0.7);
+        --glass-border: rgba(255, 0, 127, 0.2);
+        --card-shadow: 0 8px 32px rgba(255, 0, 127, 0.2);
+        {% elif restaurant.theme_name == 'cozy_coffee' %}
+        --bg-primary: #fafaf9;
+        --bg-secondary: #efebe9;
+        --accent-color: #4e342e;
+        --accent-gradient: linear-gradient(135deg, #4e342e 0%, #8d6e63 100%);
+        --text-primary: #2d1d19;
+        --text-secondary: #795548;
+        --glass-bg: rgba(239, 235, 233, 0.85);
+        --glass-border: rgba(78, 52, 46, 0.1);
+        --card-shadow: 0 8px 30px rgba(78, 52, 46, 0.05);
+        {% elif restaurant.theme_name == 'sweet_strawberry' %}
+        --bg-primary: #fff5f5;
+        --bg-secondary: #ffffff;
+        --accent-color: #e53e3e;
+        --accent-gradient: linear-gradient(135deg, #e53e3e 0%, #feb2b2 100%);
+        --text-primary: #742a2a;
+        --text-secondary: #9b2c2c;
+        --glass-bg: rgba(255, 255, 255, 0.85);
+        --glass-border: rgba(229, 62, 62, 0.1);
+        --card-shadow: 0 8px 30px rgba(229, 62, 62, 0.05);
+        {% elif restaurant.theme_name == 'midnight_steel' %}
+        --bg-primary: #0f172a;
+        --bg-secondary: #1e293b;
+        --accent-color: #38bdf8;
+        --accent-gradient: linear-gradient(135deg, #38bdf8 0%, #818cf8 100%);
+        --text-primary: #f8fafc;
+        --text-secondary: #94a3b8;
+        --glass-bg: rgba(30, 41, 59, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.05);
+        --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        {% elif restaurant.theme_name == 'lavender_fields' %}
+        --bg-primary: #faf5ff;
+        --bg-secondary: #ffffff;
+        --accent-color: #7c3aed;
+        --accent-gradient: linear-gradient(135deg, #7c3aed 0%, #c084fc 100%);
+        --text-primary: #4c1d95;
+        --text-secondary: #7c3aed;
+        --glass-bg: rgba(255, 255, 255, 0.85);
+        --glass-border: rgba(124, 58, 237, 0.1);
+        --card-shadow: 0 8px 30px rgba(124, 58, 237, 0.04);
+        {% elif restaurant.theme_name == 'terracotta_sunset' %}
+        --bg-primary: #fdf8f6;
+        --bg-secondary: #ffffff;
+        --accent-color: #c2410c;
+        --accent-gradient: linear-gradient(135deg, #c2410c 0%, #f97316 100%);
+        --text-primary: #431407;
+        --text-secondary: #9a3412;
+        --glass-bg: rgba(255, 255, 255, 0.85);
+        --glass-border: rgba(194, 65, 12, 0.1);
+        --card-shadow: 0 8px 30px rgba(194, 65, 12, 0.05);
+        {% elif restaurant.theme_name == 'volcanic_fire' %}
+        --bg-primary: #090505;
+        --bg-secondary: #160f0f;
+        --accent-color: #dc2626;
+        --accent-gradient: linear-gradient(135deg, #dc2626 0%, #f87171 100%);
+        --text-primary: #fecaca;
+        --text-secondary: #991b1b;
+        --glass-bg: rgba(22, 15, 15, 0.7);
+        --glass-border: rgba(220, 38, 38, 0.15);
+        --card-shadow: 0 8px 32px rgba(220, 38, 38, 0.25);
+        {% elif restaurant.theme_name == 'minty_green' %}
+        --bg-primary: #f0fdfa;
+        --bg-secondary: #ffffff;
+        --accent-color: #0d9488;
+        --accent-gradient: linear-gradient(135deg, #0d9488 0%, #2dd4bf 100%);
+        --text-primary: #115e59;
+        --text-secondary: #14b8a6;
+        --glass-bg: rgba(255, 255, 255, 0.85);
+        --glass-border: rgba(13, 148, 136, 0.1);
+        --card-shadow: 0 8px 30px rgba(13, 148, 136, 0.04);
+        {% elif restaurant.theme_name == 'royal_velvet' %}
+        --bg-primary: #1e1b4b;
+        --bg-secondary: #312e81;
+        --accent-color: #fbbf24;
+        --accent-gradient: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        --text-primary: #fef3c7;
+        --text-secondary: #a5b4fc;
+        --glass-bg: rgba(31, 46, 129, 0.7);
+        --glass-border: rgba(251, 191, 36, 0.15);
+        --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        {% elif restaurant.theme_name == 'honey_amber' %}
+        --bg-primary: #fefaf0;
+        --bg-secondary: #ffffff;
+        --accent-color: #d97706;
+        --accent-gradient: linear-gradient(135deg, #d97706 0%, #fbbf24 100%);
+        --text-primary: #451a03;
+        --text-secondary: #b45309;
+        --glass-bg: rgba(255, 255, 255, 0.85);
+        --glass-border: rgba(217, 119, 6, 0.1);
+        --card-shadow: 0 8px 30px rgba(217, 119, 6, 0.04);
+        {% elif restaurant.theme_name == 'vintage_cream' %}
+        --bg-primary: #faf6eb;
+        --bg-secondary: #f3ede2;
+        --accent-color: #991b1b;
+        --accent-gradient: linear-gradient(135deg, #991b1b 0%, #b91c1c 100%);
+        --text-primary: #450a0a;
+        --text-secondary: #7f1d1d;
+        --glass-bg: rgba(243, 237, 226, 0.85);
+        --glass-border: rgba(153, 27, 27, 0.1);
+        --card-shadow: 0 8px 30px rgba(153, 27, 27, 0.05);
+        {% elif restaurant.theme_name == 'deep_space' %}
+        --bg-primary: #020617;
+        --bg-secondary: #0f172a;
+        --accent-color: #22c55e;
+        --accent-gradient: linear-gradient(135deg, #22c55e 0%, #10b981 100%);
+        --text-primary: #f8fafc;
+        --text-secondary: #64748b;
+        --glass-bg: rgba(15, 23, 42, 0.7);
+        --glass-border: rgba(255, 255, 255, 0.05);
+        --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        {% elif restaurant.theme_name == 'charcoal_copper' %}
+        --bg-primary: #18181b;
+        --bg-secondary: #27272a;
+        --accent-color: #ea580c;
+        --accent-gradient: linear-gradient(135deg, #ea580c 0%, #f97316 100%);
+        --text-primary: #fafafa;
+        --text-secondary: #a1a1aa;
+        --glass-bg: rgba(39, 39, 42, 0.7);
+        --glass-border: rgba(234, 88, 12, 0.15);
+        --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        {% elif restaurant.theme_name == 'cotton_candy' %}
+        --bg-primary: #fdf2f8;
+        --bg-secondary: #ffffff;
+        --accent-color: #ec4899;
+        --accent-gradient: linear-gradient(135deg, #ec4899 0%, #60a5fa 100%);
+        --text-primary: #831843;
+        --text-secondary: #db2777;
+        --glass-bg: rgba(255, 255, 255, 0.85);
+        --glass-border: rgba(236, 72, 153, 0.1);
+        --card-shadow: 0 8px 30px rgba(236, 72, 153, 0.04);
+        {% elif restaurant.theme_name == 'emerald_luxury' %}
+        --bg-primary: #022c22;
+        --bg-secondary: #064e3b;
+        --accent-color: #f59e0b;
+        --accent-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        --text-primary: #ecfdf5;
+        --text-secondary: #a7f3d0;
+        --glass-bg: rgba(6, 78, 59, 0.7);
+        --glass-border: rgba(245, 158, 11, 0.15);
+        --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        {% elif restaurant.theme_name == 'sunset_glow' %}
+        --bg-primary: #fffbeb;
+        --bg-secondary: #ffffff;
+        --accent-color: #f97316;
+        --accent-gradient: linear-gradient(135deg, #f97316 0%, #eab308 100%);
+        --text-primary: #7c2d12;
+        --text-secondary: #ca8a04;
+        --glass-bg: rgba(255, 255, 255, 0.85);
+        --glass-border: rgba(249, 115, 22, 0.1);
+        --card-shadow: 0 8px 30px rgba(249, 115, 22, 0.04);
+        {% elif restaurant.theme_name == 'olive_garden' %}
+        --bg-primary: #fafaf9;
+        --bg-secondary: #f4f3ef;
+        --accent-color: #3f6212;
+        --accent-gradient: linear-gradient(135deg, #3f6212 0%, #65a30d 100%);
+        --text-primary: #1a2e05;
+        --text-secondary: #4d7c0f;
+        --glass-bg: rgba(244, 243, 239, 0.85);
+        --glass-border: rgba(63, 98, 18, 0.1);
+        --card-shadow: 0 8px 30px rgba(63, 98, 18, 0.04);
+        {% elif restaurant.theme_name == 'sakura_blossom' %}
+        --bg-primary: #fff1f2;
+        --bg-secondary: #ffffff;
+        --accent-color: #fda4af;
+        --accent-gradient: linear-gradient(135deg, #fda4af 0%, #f43f5e 100%);
+        --text-primary: #4c0519;
+        --text-secondary: #e11d48;
+        --glass-bg: rgba(255, 255, 255, 0.85);
+        --glass-border: rgba(253, 164, 175, 0.15);
+        --card-shadow: 0 8px 30px rgba(253, 164, 175, 0.05);
         {% elif restaurant.theme_name == 'custom' %}
         --accent-color: {{ restaurant.theme_primary_color or '#059669' }};
         --accent-gradient: linear-gradient(135deg, {{ restaurant.theme_primary_color or '#059669' }} 0%, {{ restaurant.theme_primary_color or '#059669' }}dd 100%);
@@ -177,6 +377,24 @@
 {% block content %}
 <div class="customer-menu-layout">
     
+    <!-- Top Action Panel: Language & Order Type Toggle -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px;">
+        <button class="btn btn-secondary lang-toggle-btn" onclick="toggleLanguage()" style="padding: 6px 16px; font-size: 13px; border-radius: 20px; font-weight: bold; background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-primary); min-width: 90px;">
+            <i class="fa-solid fa-globe"></i> English
+        </button>
+        
+        <div class="order-type-switch" style="display: flex; background: rgba(0,0,0,0.3); border-radius: 20px; padding: 3px; border: 1px solid var(--glass-border);">
+            {% if table.id != 0 %}
+            <button class="btn active-type" id="type-dinein-btn" onclick="setOrderType('dine_in')" style="padding: 5px 14px; font-size: 12px; border-radius: 18px; font-weight: bold; background: var(--accent-gradient); color: #fff; border: none; cursor: pointer; transition: all 0.2s;">
+                <span class="lang-txt" data-key="dinein">محلي</span>
+            </button>
+            {% endif %}
+            <button class="btn {% if table.id == 0 %}active-type{% endif %}" id="type-takeaway-btn" onclick="setOrderType('take_away')" style="padding: 5px 14px; font-size: 12px; border-radius: 18px; font-weight: bold; {% if table.id == 0 %}background: var(--accent-gradient); color: #fff;{% else %}background: transparent; color: var(--text-secondary);{% endif %} border: none; cursor: pointer; transition: all 0.2s;">
+                <span class="lang-txt" data-key="takeaway">سفري</span>
+            </button>
+        </div>
+    </div>
+    
     <!-- Restaurant Header Details -->
     <div class="restaurant-profile-header">
         {% if restaurant.logo %}
@@ -185,41 +403,41 @@
             <div class="restaurant-logo-circle" style="background: var(--bg-secondary); display: flex; align-items: center; justify-content: center; font-size: 32px; margin: 0 auto 12px auto;">🍽️</div>
         {% endif %}
         <h1>{{ restaurant.name }}</h1>
-        <div class="table-badge-indicator">
-            <i class="fa-solid fa-chair"></i> طاولة رقم {{ table.table_number }}
+        <div class="table-badge-indicator" id="table-badge-elem" style="display: {% if table.id == 0 %}none{% else %}inline-flex{% endif %};">
+            <i class="fa-solid fa-chair"></i> <span class="lang-txt" data-key="table_badge">طاولة رقم </span>&nbsp;<span id="table-badge-num">{{ table.table_number }}</span>
         </div>
         
         <!-- Table state indication -->
-        <div>
-            {% if table.status == 'available' %}
-                <span class="client-status-indicator" style="background: rgba(0, 230, 118, 0.1); color: var(--success-color);"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--success-color); display: inline-block;"></span> جلسة جديدة</span>
-            {% elif table.status == 'occupied' %}
-                <span class="client-status-indicator" style="background: rgba(0, 120, 212, 0.1); color: #00bcf2;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #00bcf2; display: inline-block;"></span> جلسة نشطة - قيد الخدمة</span>
-            {% elif table.status == 'billing' %}
-                <span class="client-status-indicator" style="background: rgba(255, 23, 68, 0.1); color: var(--danger-color); animation: blinker-animation 1.5s infinite;"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--danger-color); display: inline-block;"></span> بانتظار الفاتورة والدفع كاش</span>
+        <div id="table-state-box">
+            {% if table.id != 0 %}
+                {% if table.status == 'available' %}
+                    <span class="client-status-indicator" style="background: rgba(0, 230, 118, 0.1); color: var(--success-color);"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--success-color); display: inline-block;"></span> <span class="lang-txt" data-key="new_session">جلسة جديدة</span></span>
+                {% elif table.status == 'occupied' %}
+                    <span class="client-status-indicator" style="background: rgba(0, 120, 212, 0.1); color: #00bcf2;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #00bcf2; display: inline-block;"></span> <span class="lang-txt" data-key="active_session">جلسة نشطة - قيد الخدمة</span></span>
+                {% elif table.status == 'billing' %}
+                    <span class="client-status-indicator" style="background: rgba(255, 23, 68, 0.1); color: var(--danger-color); animation: blinker-animation 1.5s infinite;"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--danger-color); display: inline-block;"></span> <span class="lang-txt" data-key="awaiting_bill">بانتظار الفاتورة والدفع كاش</span></span>
+                {% endif %}
+            {% else %}
+                <span class="client-status-indicator" style="background: rgba(255, 255, 255, 0.05); color: var(--text-secondary);"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--text-secondary); display: inline-block;"></span> <span class="lang-txt" data-key="browse_only">تصفح فقط</span></span>
             {% endif %}
         </div>
     </div>
     
     <!-- Quick Actions (Call waiter, Request bill) -->
-    <div class="customer-quick-actions">
-        <button class="btn btn-secondary" onclick="sendWaiterCall('waiter')">
-            <i class="fa-solid fa-bell"></i> استدعاء النادل
-        </button>
+    <div class="customer-quick-actions" id="quick-actions-box" style="display: {% if table.id == 0 %}none{% else %}flex{% endif %};">
         {% if table.id != 0 %}
-            <button class="btn btn-secondary" onclick="requestBillDetails()">
-                <i class="fa-solid fa-receipt"></i> طلب الفاتورة وتفاصيل الحساب
-            </button>
-        {% else %}
-            <button class="btn btn-secondary" style="opacity: 0.5;" disabled>
-                <i class="fa-solid fa-receipt"></i> تصفح فقط
-            </button>
+        <button class="btn btn-secondary" onclick="sendWaiterCall('waiter')">
+            <i class="fa-solid fa-bell"></i> <span class="lang-txt" data-key="callwaiter">استدعاء النادل</span>
+        </button>
+        <button class="btn btn-secondary" onclick="requestBillDetails()">
+            <i class="fa-solid fa-receipt"></i> <span class="lang-txt" data-key="requestbill">طلب الفاتورة وتفاصيل الحساب</span>
+        </button>
         {% endif %}
     </div>
     
     <!-- Horizontal Categories Slider -->
     <div class="category-slider">
-        <button class="category-slider-btn active" onclick="filterCategory('all', this)">الكل</button>
+        <button class="category-slider-btn active lang-txt" data-key="all" onclick="filterCategory('all', this)">الكل</button>
         {% for cat in categories %}
         <button class="category-slider-btn" onclick="filterCategory('cat-{{ cat.id }}', this)">{{ cat.name }}</button>
         {% endfor %}
@@ -233,18 +451,19 @@
                 <div class="customer-item-title">{{ item.name }}</div>
                 <p class="customer-item-desc">{{ item.description or 'لا يوجد وصف.' }}</p>
                 <div class="customer-item-price-row">
-                    <span class="customer-item-price">{{ item.price }} ر.س</span>
+                    <span class="customer-item-price">{{ item.price }} <span class="lang-txt" data-key="currency">ر.س</span></span>
                     
-                    {% if item.available == 1 and table.id != 0 %}
-                        <div class="qty-controls" id="controls-{{ item.id }}">
+                    {% if item.available == 1 %}
+                        <div class="qty-controls" id="controls-{{ item.id }}" style="display: {% if table.id != 0 %}flex{% else %}none{% endif %};">
                             <button class="qty-btn" onclick="addToCart({{ item.id }}, '{{ item.name }}', {{ item.price }}, -1)">-</button>
                             <span class="qty-val" id="qty-{{ item.id }}">0</span>
                             <button class="qty-btn" onclick="addToCart({{ item.id }}, '{{ item.name }}', {{ item.price }}, 1)">+</button>
                         </div>
-                    {% elif table.id == 0 %}
-                        <span style="color: var(--text-secondary); font-size: 11px;"><i class="fa-solid fa-eye"></i> تصفح فقط</span>
+                        <span class="browse-only-txt" id="browse-{{ item.id }}" style="color: var(--text-secondary); font-size: 11px; display: {% if table.id == 0 %}inline-block{% else %}none{% endif %};">
+                            <i class="fa-solid fa-eye"></i> <span class="lang-txt" data-key="browse_only">تصفح فقط</span>
+                        </span>
                     {% else %}
-                        <span style="color: var(--danger-color); font-size: 11px; font-weight: bold;"><i class="fa-solid fa-ban"></i> غير متوفر</span>
+                        <span style="color: var(--danger-color); font-size: 11px; font-weight: bold;"><i class="fa-solid fa-ban"></i> <span class="lang-txt" data-key="unavailable">غير متوفر</span></span>
                     {% endif %}
                 </div>
             </div>
@@ -258,7 +477,7 @@
             </div>
         </div>
         {% else %}
-        <div class="glass-card" style="text-align: center; color: var(--text-secondary); padding: 40px;">
+        <div class="glass-card lang-txt" data-key="menu_empty" style="text-align: center; color: var(--text-secondary); padding: 40px;">
             لا توجد وجبات مضافة في المنيو حالياً.
         </div>
         {% endfor %}
@@ -274,7 +493,7 @@
             <span class="cart-total-amount" id="cart-total">0.00 ر.س</span>
         </div>
         <button class="btn btn-primary" onclick="openCartModal()">
-            <i class="fa-solid fa-basket-shopping"></i> عرض السلة والطلب
+            <i class="fa-solid fa-basket-shopping"></i> <span class="lang-txt" data-key="cart_btn">عرض السلة والطلب</span>
         </button>
     </div>
 </div>
@@ -283,23 +502,29 @@
 <div id="cart-modal" class="modal">
     <div class="modal-content">
         <button class="modal-close" onclick="closeModal('cart-modal')">&times;</button>
-        <h3 class="modal-title"><i class="fa-solid fa-cart-shopping"></i> سلة طلباتك</h3>
+        <h3 class="modal-title"><i class="fa-solid fa-cart-shopping"></i> <span class="lang-txt" data-key="cart_title">سلة طلباتك</span></h3>
         
         <div class="modal-body">
-            <div id="cart-items-details" style="max-height: 250px; overflow-y: auto; margin-bottom: 20px;">
+            <div id="cart-items-details" style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;">
                 <!-- Dynamically filled by JS -->
             </div>
+            
+            <!-- Order Notes Field -->
+            <div style="margin-top: 15px; margin-bottom: 15px;">
+                <textarea id="order-notes" class="form-control lang-placeholder" data-key="notes_placeholder" placeholder="ملاحظات خاصة للطلب (مثال: بدون بصل، زيادة كاتشب...)" rows="2" style="width: 100%; border-radius: 8px; background: rgba(0,0,0,0.2); border: 1px solid var(--glass-border); color: var(--text-primary); padding: 8px 12px; font-size: 12px; resize: none; font-family: inherit;"></textarea>
+            </div>
+            
             <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 18px; border-top: 1px solid var(--glass-border); padding-top: 15px;">
-                <span>الإجمالي</span>
+                <span class="lang-txt" data-key="total">الإجمالي</span>
                 <span id="modal-cart-total" style="color: var(--success-color);">0.00 ر.س</span>
             </div>
             <div style="font-size: 11px; color: var(--text-secondary); margin-top: 10px; text-align: center;">
-                <i class="fa-solid fa-circle-info"></i> الدفع نقداً (كاش) أو شبكة عند الطاولة بعد استلام طلبك.
+                <i class="fa-solid fa-circle-info"></i> <span class="lang-txt" data-key="payment_info">الدفع نقداً (كاش) أو شبكة عند الطاولة بعد استلام طلبك.</span>
             </div>
         </div>
         
         <button class="btn btn-primary" style="width: 100%;" onclick="submitOrder()">
-            <i class="fa-solid fa-paper-plane"></i> إرسال الطلب للمطبخ
+            <i class="fa-solid fa-paper-plane"></i> <span class="lang-txt" data-key="submit_order">إرسال الطلب للمطبخ</span>
         </button>
     </div>
 </div>
@@ -307,21 +532,21 @@
 <!-- ACTIVE ORDER TRACKER MODAL -->
 <div id="tracker-modal" class="modal" style="display: none;">
     <div class="modal-content" style="max-width: 400px; text-align: center;">
-        <h3 class="modal-title"><i class="fa-solid fa-spinner fa-spin" style="color: var(--accent-color);"></i> تتبع طلبك</h3>
+        <h3 class="modal-title"><i class="fa-solid fa-spinner fa-spin" style="color: var(--accent-color);"></i> <span class="lang-txt" data-key="tracker_title">تتبع طلبك</span></h3>
         <div class="modal-body">
-            <p style="color: var(--text-secondary); font-size: 14px;">تم إرسال طلبك رقم <span id="tracker-order-id" style="color: var(--accent-color); font-weight: bold;">#0</span> إلى المطبخ بنجاح!</p>
+            <p style="color: var(--text-secondary); font-size: 14px;"><span class="lang-txt" data-key="tracker_sent">تم إرسال طلبك رقم </span> <span id="tracker-order-id" style="color: var(--accent-color); font-weight: bold;">#0</span> <span class="lang-txt" data-key="tracker_kitchen">إلى المطبخ بنجاح!</span></p>
             
             <div class="stepper">
                 <div class="step-progress-bar" id="stepper-progress"></div>
                 
                 <div class="step" id="step-pending">
-                    1 <span class="step-label">قيد الانتظار</span>
+                    1 <span class="step-label lang-txt" data-key="step_pending">قيد الانتظار</span>
                 </div>
                 <div class="step" id="step-preparing">
-                    2 <span class="step-label">يتم التحضير</span>
+                    2 <span class="step-label lang-txt" data-key="step_preparing">يتم التحضير</span>
                 </div>
                 <div class="step" id="step-served">
-                    3 <span class="step-label">تم التقديم</span>
+                    3 <span class="step-label lang-txt" data-key="step_served">تم التقديم</span>
                 </div>
             </div>
             
@@ -329,7 +554,7 @@
                 ⏳ ننتظر موافقة المطبخ...
             </div>
         </div>
-        <button class="btn btn-secondary" style="width: 100%;" onclick="closeTrackerModal()"><i class="fa-solid fa-circle-xmark"></i> إغلاق شاشة التتبع</button>
+        <button class="btn btn-secondary" style="width: 100%;" onclick="closeTrackerModal()"><i class="fa-solid fa-circle-xmark"></i> <span class="lang-txt" data-key="close_tracker">إغلاق شاشة التتبع</span></button>
     </div>
 </div>
 
@@ -337,16 +562,16 @@
 <div id="customer-bill-modal" class="modal">
     <div class="modal-content" style="max-width: 420px;">
         <button class="modal-close" onclick="closeModal('customer-bill-modal')">&times;</button>
-        <h3 class="modal-title" style="border-bottom: 1px dashed var(--glass-border); padding-bottom: 10px;"><i class="fa-solid fa-file-invoice-dollar"></i> تفاصيل الحساب الحالي</h3>
+        <h3 class="modal-title" style="border-bottom: 1px dashed var(--glass-border); padding-bottom: 10px;"><i class="fa-solid fa-file-invoice-dollar"></i> <span class="lang-txt" data-key="bill_title">تفاصيل الحساب الحالي</span></h3>
         
         <div class="modal-body" style="font-size: 13px;">
             <div style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;">
                 <table style="width: 100%; border-collapse: collapse; text-align: right;">
                     <thead>
                         <tr style="border-bottom: 1px solid var(--glass-border); color: var(--text-secondary); font-size: 12px;">
-                            <th style="padding: 6px 0;">الوجبة</th>
-                            <th style="padding: 6px 0; text-align: center;">الكمية</th>
-                            <th style="padding: 6px 0; text-align: left;">السعر</th>
+                            <th style="padding: 6px 0;" class="lang-txt" data-key="item">الوجبة</th>
+                            <th style="padding: 6px 0; text-align: center;" class="lang-txt" data-key="qty">الكمية</th>
+                            <th style="padding: 6px 0; text-align: left;" class="lang-txt" data-key="price">السعر</th>
                         </tr>
                     </thead>
                     <tbody id="bill-items-body">
@@ -357,25 +582,25 @@
             
             <div style="background: rgba(0, 0, 0, 0.2); padding: 12px; border-radius: 8px; display: flex; flex-direction: column; gap: 6px;">
                 <div style="display: flex; justify-content: space-between;">
-                    <span>المجموع الفرعي</span>
+                    <span class="lang-txt" data-key="bill_subtotal">المجموع الفرعي</span>
                     <span id="bill-subtotal">0.00 ر.س</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; color: var(--text-secondary);">
-                    <span>ضريبة القيمة المضافة (15%)</span>
+                    <span class="lang-txt" data-key="bill_vat">ضريبة القيمة المضافة (15%)</span>
                     <span id="bill-vat">0.00 ر.س</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; border-top: 1px solid var(--glass-border); padding-top: 8px; color: var(--success-color);">
-                    <span>المجموع الإجمالي</span>
+                    <span class="lang-txt" data-key="bill_total">المجموع الإجمالي</span>
                     <span id="bill-total">0.00 ر.س</span>
                 </div>
             </div>
             
             <div style="margin-top: 20px; text-align: center; color: var(--warning-color); font-weight: bold;">
-                <i class="fa-solid fa-hourglass-half"></i> ننتظر النادل لاستلام الكاش وتصفير الطاولة...
+                <i class="fa-solid fa-hourglass-half"></i> <span class="lang-txt" data-key="bill_waiting">ننتظر النادل لاستلام الكاش وتصفير الطاولة...</span>
             </div>
         </div>
         
-        <button class="btn btn-secondary" style="width: 100%;" onclick="closeModal('customer-bill-modal')">إغلاق الفاتورة</button>
+        <button class="btn btn-secondary" style="width: 100%;" onclick="closeModal('customer-bill-modal')"><span class="lang-txt" data-key="close_bill">إغلاق الفاتورة</span></button>
     </div>
 </div>
 
@@ -393,8 +618,206 @@
     const tableId = {{ table.id }};
     const tableToken = '{{ table.token }}';
     
+    // Translation Dictionary
+    const translations = {
+        ar: {
+            lang_btn: 'English',
+            dir: 'rtl',
+            font: 'Cairo, Tajawal, sans-serif',
+            browse_only: 'تصفح فقط',
+            new_session: 'جلسة جديدة',
+            active_session: 'جلسة نشطة - قيد الخدمة',
+            awaiting_bill: 'بانتظار الفاتورة والدفع كاش',
+            callwaiter: 'استدعاء النادل',
+            requestbill: 'طلب الفاتورة وتفاصيل الحساب',
+            dinein: 'محلي',
+            takeaway: 'سفري',
+            table_badge: 'طاولة رقم ',
+            all: 'الكل',
+            cart_title: 'سلة طلباتك',
+            cart_btn: 'عرض السلة والطلب',
+            empty_cart: 'سلتك فارغة حالياً.',
+            total: 'الإجمالي',
+            payment_info: 'الدفع نقداً (كاش) أو شبكة عند الطاولة بعد استلام طلبك.',
+            submit_order: 'إرسال الطلب للمطبخ',
+            tracker_title: 'تتبع طلبك',
+            tracker_sent: 'تم إرسال طلبك رقم ',
+            tracker_kitchen: ' إلى المطبخ بنجاح!',
+            step_pending: 'قيد الانتظار',
+            step_preparing: 'يتم التحضير',
+            step_served: 'تم التقديم',
+            status_pending: '⏳ ننتظر موافقة المطبخ وبدء التجهيز...',
+            status_preparing: '🍳 يتم طهي وتجهيز وجبتك الآن!',
+            status_served: '🍽️ الوجبة جاهزة وقدمت إليك! بالعافية 🥰',
+            status_cancelled: '❌ نعتذر منك، تم إلغاء الطلب من قبل المطبخ.',
+            close_tracker: 'إغلاق شاشة التتبع',
+            bill_title: 'تفاصيل الحساب الحالي',
+            bill_empty: 'لا توجد طلبات جارية لتصفيها حالياً.',
+            bill_subtotal: 'المجموع الفرعي',
+            bill_vat: 'ضريبة القيمة المضافة (15%)',
+            bill_total: 'المجموع الإجمالي',
+            bill_waiting: '⏳ ننتظر النادل لاستلام الكاش وتصفير الطاولة...',
+            close_bill: 'إغلاق الفاتورة',
+            toast_waiter: 'تم استدعاء النادل بنجاح!',
+            toast_bill: 'تم طلب الفاتورة بنجاح!',
+            notes_placeholder: 'ملاحظات خاصة للطلب (مثال: بدون بصل، زيادة كاتشب...)',
+            add_to_cart: 'أضف للسلة',
+            qty: 'الكمية',
+            price: 'السعر',
+            item: 'الوجبة',
+            no_desc: 'لا يوجد وصف.',
+            currency: 'ر.س',
+            menu_empty: 'لا توجد وجبات مضافة في المنيو حالياً.',
+            unavailable: 'غير متوفر'
+        },
+        en: {
+            lang_btn: 'العربية',
+            dir: 'ltr',
+            font: 'Outfit, Inter, sans-serif',
+            browse_only: 'Browse Only',
+            new_session: 'New Session',
+            active_session: 'Active Session - In Service',
+            awaiting_bill: 'Awaiting Invoice & Cash Payment',
+            callwaiter: 'Call Waiter',
+            requestbill: 'Request Bill & Invoice',
+            dinein: 'Dine-In',
+            takeaway: 'Takeaway',
+            table_badge: 'Table No. ',
+            all: 'All',
+            cart_title: 'Your Cart',
+            cart_btn: 'View Cart & Order',
+            empty_cart: 'Your cart is currently empty.',
+            total: 'Total',
+            payment_info: 'Payment is cash or card at the table after receiving your order.',
+            submit_order: 'Send Order to Kitchen',
+            tracker_title: 'Track Your Order',
+            tracker_sent: 'Your order number ',
+            tracker_kitchen: ' was sent to the kitchen successfully!',
+            step_pending: 'Pending',
+            step_preparing: 'Preparing',
+            step_served: 'Served',
+            status_pending: '⏳ Waiting for kitchen approval and preparation...',
+            status_preparing: '🍳 Your order is being cooked right now!',
+            status_served: '🍽️ Your order is served! Bon appétit! 🥰',
+            status_cancelled: '❌ Sorry, your order was cancelled by the kitchen.',
+            close_tracker: 'Close Tracking Screen',
+            bill_title: 'Current Invoice Details',
+            bill_empty: 'No active orders to checkout right now.',
+            bill_subtotal: 'Subtotal',
+            bill_vat: 'VAT (15%)',
+            bill_total: 'Grand Total',
+            bill_waiting: '⏳ Waiting for the waiter to collect cash and reset table...',
+            close_bill: 'Close Invoice',
+            toast_waiter: 'Waiter called successfully!',
+            toast_bill: 'Invoice requested successfully!',
+            notes_placeholder: 'Special instructions (e.g. no onions, extra ketchup...)',
+            add_to_cart: 'Add to Cart',
+            qty: 'Qty',
+            price: 'Price',
+            item: 'Item',
+            no_desc: 'No description available.',
+            currency: 'SAR',
+            menu_empty: 'No menu items available currently.',
+            unavailable: 'Unavailable'
+        }
+    };
+
+    let currentLang = localStorage.getItem('menu_lang') || 'ar';
+    let currentOrderType = (tableId === 0) ? 'take_away' : 'dine_in';
+
+    function applyLanguage(lang) {
+        currentLang = lang;
+        localStorage.setItem('menu_lang', lang);
+        
+        // Update document dir and language
+        document.documentElement.dir = translations[lang].dir;
+        document.documentElement.lang = lang;
+        document.body.style.fontFamily = translations[lang].font;
+        
+        // Update language button text
+        document.querySelector('.lang-toggle-btn').innerHTML = `<i class="fa-solid fa-globe"></i> ${translations[lang].lang_btn}`;
+        
+        // Translate all elements with .lang-txt class
+        document.querySelectorAll('.lang-txt').forEach(elem => {
+            const key = elem.getAttribute('data-key');
+            if (translations[lang][key]) {
+                elem.innerText = translations[lang][key];
+            }
+        });
+        
+        // Translate input placeholders
+        document.querySelectorAll('.lang-placeholder').forEach(elem => {
+            const key = elem.getAttribute('data-key');
+            if (translations[lang][key]) {
+                elem.placeholder = translations[lang][key];
+            }
+        });
+        
+        // Refresh cart footer and elements
+        updateUI();
+    }
+
+    function toggleLanguage() {
+        const nextLang = currentLang === 'ar' ? 'en' : 'ar';
+        applyLanguage(nextLang);
+    }
+
+    function setOrderType(type) {
+        if (tableId === 0 && type === 'dine_in') return; // Cannot do dine in if no table
+        currentOrderType = type;
+        
+        const dineBtn = document.getElementById('type-dinein-btn');
+        const takeBtn = document.getElementById('type-takeaway-btn');
+        const quickActions = document.getElementById('quick-actions-box');
+        
+        if (type === 'take_away') {
+            if (dineBtn) {
+                dineBtn.className = 'btn';
+                dineBtn.style.background = 'transparent';
+                dineBtn.style.color = 'var(--text-secondary)';
+            }
+            
+            takeBtn.className = 'btn active-type';
+            takeBtn.style.background = 'var(--accent-gradient)';
+            takeBtn.style.color = '#fff';
+            
+            // Hide quick actions for takeaway
+            if (quickActions) quickActions.style.display = 'none';
+            
+            // If table.id === 0, show all quantity controls and hide browse only tags
+            if (tableId === 0) {
+                document.querySelectorAll('.qty-controls').forEach(el => el.style.display = 'flex');
+                document.querySelectorAll('.browse-only-txt').forEach(el => el.style.display = 'none');
+            }
+        } else {
+            takeBtn.className = 'btn';
+            takeBtn.style.background = 'transparent';
+            takeBtn.style.color = 'var(--text-secondary)';
+            
+            if (dineBtn) {
+                dineBtn.className = 'btn active-type';
+                dineBtn.style.background = 'var(--accent-gradient)';
+                dineBtn.style.color = '#fff';
+            }
+            
+            // Show quick actions for dine-in
+            if (quickActions) quickActions.style.display = 'flex';
+            
+            if (tableId === 0) {
+                document.querySelectorAll('.qty-controls').forEach(el => el.style.display = 'none');
+                document.querySelectorAll('.browse-only-txt').forEach(el => el.style.display = 'inline-block');
+            }
+        }
+    }
+
     // Load cart from LocalStorage on load
     window.addEventListener('DOMContentLoaded', () => {
+        // Initialize language
+        applyLanguage(currentLang);
+        
+        // Initialize order type
+        setOrderType(currentOrderType);
+        
         const savedCart = localStorage.getItem(`cart_${restaurantId}_${tableId}`);
         if (savedCart) {
             cart = JSON.parse(savedCart);
@@ -452,8 +875,10 @@
         const cartFooter = document.getElementById('floating-cart');
         if (totalItems > 0) {
             cartFooter.style.display = 'block';
-            document.getElementById('cart-count').innerText = `${totalItems} وجبات`;
-            document.getElementById('cart-total').innerText = `${totalPrice.toFixed(2)} ر.س`;
+            const itemsLabel = currentLang === 'ar' ? 'وجبات' : 'items';
+            const currencyLabel = currentLang === 'ar' ? 'ر.س' : 'SAR';
+            document.getElementById('cart-count').innerText = `${totalItems} ${itemsLabel}`;
+            document.getElementById('cart-total').innerText = `${totalPrice.toFixed(2)} ${currencyLabel}`;
         } else {
             cartFooter.style.display = 'none';
         }
@@ -467,10 +892,12 @@
         
         const items = Object.values(cart);
         if (items.length === 0) {
-            container.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">سلتك فارغة حالياً.</p>';
+            const emptyMsg = translations[currentLang].empty_cart;
+            container.innerHTML = `<p style="text-align: center; color: var(--text-secondary);">${emptyMsg}</p>`;
             return;
         }
         
+        const currencyLabel = currentLang === 'ar' ? 'ر.س' : 'SAR';
         items.forEach(item => {
             const itemTotal = item.price * item.quantity;
             totalPrice += itemTotal;
@@ -478,7 +905,7 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px 15px; border-radius: 8px;">
                     <div>
                         <div style="font-weight: bold; font-size: 14px;">${item.name}</div>
-                        <div style="font-size: 11px; color: var(--success-color); margin-top: 4px;">${item.price.toFixed(2)} ر.س</div>
+                        <div style="font-size: 11px; color: var(--success-color); margin-top: 4px;">${item.price.toFixed(2)} ${currencyLabel}</div>
                     </div>
                     <div class="qty-controls">
                         <button class="qty-btn" onclick="adjustModalItem(${item.id}, -1)">-</button>
@@ -490,7 +917,7 @@
         });
         
         container.innerHTML = html;
-        document.getElementById('modal-cart-total').innerText = `${totalPrice.toFixed(2)} ر.س`;
+        document.getElementById('modal-cart-total').innerText = `${totalPrice.toFixed(2)} ${currencyLabel}`;
         modal.style.display = 'flex';
     }
     
@@ -509,10 +936,14 @@
         const items = Object.values(cart);
         if (items.length === 0) return;
         
+        const notes = document.getElementById('order-notes').value.trim();
+        
         const orderData = {
             restaurant_id: restaurantId,
             table_id: tableId,
             token: tableToken,
+            order_type: currentOrderType,
+            notes: notes ? notes : null,
             items: items.map(item => ({
                 menu_item_id: item.id,
                 quantity: item.quantity,
@@ -531,6 +962,7 @@
             if (response.ok) {
                 cart = {};
                 localStorage.removeItem(`cart_${restaurantId}_${tableId}`);
+                document.getElementById('order-notes').value = ''; // clear notes
                 updateUI();
                 closeModal('cart-modal');
                 
@@ -588,21 +1020,21 @@
         if (status === 'pending') {
             stepPending.classList.add('active');
             progressBar.style.width = '0%';
-            desc.innerHTML = '⏳ ننتظر موافقة المطبخ وبدء التجهيز...';
+            desc.innerHTML = translations[currentLang].status_pending;
         } else if (status === 'preparing') {
             stepPending.classList.add('completed');
             stepPreparing.classList.add('active');
             progressBar.style.width = '50%';
-            desc.innerHTML = '🍳 يتم طهي وتجهيز وجبتك الآن!';
+            desc.innerHTML = translations[currentLang].status_preparing;
         } else if (status === 'served' || status === 'completed' || status === 'paid') {
             stepPending.classList.add('completed');
             stepPreparing.classList.add('completed');
             stepServed.classList.add('completed');
             progressBar.style.width = '100%';
-            desc.innerHTML = '🍽️ الوجبة جاهزة وقدمت إليك! بالعافية 🥰';
+            desc.innerHTML = translations[currentLang].status_served;
             localStorage.removeItem(`tracked_order_${restaurantId}_${tableId}`);
         } else if (status === 'cancelled') {
-            desc.innerHTML = '❌ نعتذر منك، تم إلغاء الطلب من قبل المطبخ.';
+            desc.innerHTML = translations[currentLang].status_cancelled;
             localStorage.removeItem(`tracked_order_${restaurantId}_${tableId}`);
         }
     }
@@ -632,7 +1064,7 @@
                 })
             });
             if (res.ok) {
-                showToast(type === 'waiter' ? 'تم استدعاء النادل بنجاح!' : 'تم طلب الفاتورة بنجاح!');
+                showToast(type === 'waiter' ? translations[currentLang].toast_waiter : translations[currentLang].toast_bill);
                 if (type === 'bill') {
                     // Reload to update table state indicator
                     setTimeout(() => location.reload(), 2000);
@@ -652,23 +1084,24 @@
             const tbody = document.getElementById('bill-items-body');
             tbody.innerHTML = '';
             
+            const currencyLabel = currentLang === 'ar' ? 'ر.س' : 'SAR';
             if (data.items.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 15px; color: var(--text-secondary);">لا توجد طلبات جارية لتصفيها حالياً.</td></tr>';
+                tbody.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 15px; color: var(--text-secondary);">${translations[currentLang].bill_empty}</td></tr>`;
             } else {
                 data.items.forEach(item => {
                     tbody.innerHTML += `
                         <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
                             <td style="padding: 6px 0;">${item.name}</td>
                             <td style="padding: 6px 0; text-align: center; font-weight: bold; color: var(--accent-color);">x${item.quantity}</td>
-                            <td style="padding: 6px 0; text-align: left;">${item.total.toFixed(2)} ر.س</td>
+                            <td style="padding: 6px 0; text-align: left;">${item.total.toFixed(2)} ${currencyLabel}</td>
                         </tr>
                     `;
                 });
             }
             
-            document.getElementById('bill-subtotal').innerText = `${data.subtotal.toFixed(2)} ر.س`;
-            document.getElementById('bill-vat').innerText = `${data.vat.toFixed(2)} ر.س`;
-            document.getElementById('bill-total').innerText = `${data.grand_total.toFixed(2)} ر.س`;
+            document.getElementById('bill-subtotal').innerText = `${data.subtotal.toFixed(2)} ${currencyLabel}`;
+            document.getElementById('bill-vat').innerText = `${data.vat.toFixed(2)} ${currencyLabel}`;
+            document.getElementById('bill-total').innerText = `${data.grand_total.toFixed(2)} ${currencyLabel}`;
             
             // Show Bill Modal
             document.getElementById('customer-bill-modal').style.display = 'flex';

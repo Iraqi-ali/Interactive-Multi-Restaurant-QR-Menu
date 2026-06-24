@@ -137,6 +137,22 @@ def init_db():
     except sqlite3.OperationalError:
         pass
     try:
+        cursor.execute("ALTER TABLE tables ADD COLUMN capacity INTEGER DEFAULT 4")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE tables ADD COLUMN location TEXT DEFAULT 'الصالة الرئيسية'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE orders ADD COLUMN order_type TEXT NOT NULL DEFAULT 'dine_in'")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE orders ADD COLUMN notes TEXT")
+    except sqlite3.OperationalError:
+        pass
+    try:
         cursor.execute("ALTER TABLE restaurants ADD COLUMN theme_name TEXT NOT NULL DEFAULT 'classic_light'")
     except sqlite3.OperationalError:
         pass
@@ -338,11 +354,11 @@ def delete_menu_item(item_id):
     conn.close()
 
 # Table Actions
-def add_table(restaurant_id, table_number, token, qr_code_path=None):
+def add_table(restaurant_id, table_number, token, qr_code_path=None, capacity=4, location='الصالة الرئيسية'):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO tables (restaurant_id, table_number, token, qr_code_path) VALUES (?, ?, ?, ?)",
-                   (restaurant_id, table_number, token, qr_code_path))
+    cursor.execute("INSERT INTO tables (restaurant_id, table_number, token, qr_code_path, capacity, location) VALUES (?, ?, ?, ?, ?, ?)",
+                   (restaurant_id, table_number, token, qr_code_path, capacity, location))
     conn.commit()
     table_id = cursor.lastrowid
     conn.close()
@@ -371,13 +387,12 @@ def delete_table(table_id):
     conn.commit()
     conn.close()
 
-# Order Actions
-def create_order(restaurant_id, table_id, total_price, items, session_id=None):
+def create_order(restaurant_id, table_id, total_price, items, session_id=None, order_type='dine_in', notes=None):
     conn = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("INSERT INTO orders (restaurant_id, table_id, total_price, session_id) VALUES (?, ?, ?, ?)",
-                       (restaurant_id, table_id, total_price, session_id))
+        cursor.execute("INSERT INTO orders (restaurant_id, table_id, total_price, session_id, order_type, notes) VALUES (?, ?, ?, ?, ?, ?)",
+                       (restaurant_id, table_id, total_price, session_id, order_type, notes))
         order_id = cursor.lastrowid
         
         for item in items:
@@ -545,7 +560,33 @@ def get_sales_analytics(restaurant_id):
     """, (restaurant_id,))
     monthly_sales = cursor.fetchone()[0]
     
-    # 3. Sales by Category
+    # 3. Weekly Sales (last 7 days)
+    cursor.execute("""
+        SELECT COALESCE(SUM(total_price), 0) FROM orders 
+        WHERE restaurant_id = ? AND (status = 'paid' OR status = 'completed') 
+          AND created_at >= date('now', '-7 days', 'localtime')
+    """, (restaurant_id,))
+    weekly_sales = cursor.fetchone()[0]
+    
+    # 4. Table Stats count
+    cursor.execute("SELECT status, COUNT(*) as count FROM tables WHERE restaurant_id = ? AND table_number != 'سفري' GROUP BY status", (restaurant_id,))
+    table_stats_rows = cursor.fetchall()
+    table_stats = {'available': 0, 'occupied': 0, 'reserved': 0, 'billing': 0}
+    for row in table_stats_rows:
+        table_stats[row['status']] = row['count']
+        
+    # Total Tables Count
+    cursor.execute("SELECT COUNT(*) FROM tables WHERE restaurant_id = ? AND table_number != 'سفري'", (restaurant_id,))
+    total_tables = cursor.fetchone()[0]
+    
+    # Active Orders Count (pending, preparing, served, billing)
+    cursor.execute("""
+        SELECT COUNT(*) FROM orders 
+        WHERE restaurant_id = ? AND status IN ('pending', 'preparing', 'served', 'billing')
+    """, (restaurant_id,))
+    active_orders_count = cursor.fetchone()[0]
+    
+    # 5. Sales by Category
     cursor.execute("""
         SELECT c.name as category_name, SUM(oi.quantity * oi.price) as total_sales
         FROM order_items oi
@@ -557,7 +598,7 @@ def get_sales_analytics(restaurant_id):
     """, (restaurant_id,))
     category_sales = [dict(row) for row in cursor.fetchall()]
     
-    # 4. Top 5 Items
+    # 6. Top 5 Items
     cursor.execute("""
         SELECT m.name as item_name, SUM(oi.quantity) as total_quantity
         FROM order_items oi
@@ -570,7 +611,7 @@ def get_sales_analytics(restaurant_id):
     """, (restaurant_id,))
     top_items = [dict(row) for row in cursor.fetchall()]
     
-    # 5. Last 30 Days Sales trend
+    # 7. Last 30 Days Sales trend
     cursor.execute("""
         SELECT date(created_at, 'localtime') as sale_date, SUM(total_price) as total_sales
         FROM orders
@@ -585,6 +626,10 @@ def get_sales_analytics(restaurant_id):
     return {
         'daily_sales': daily_sales,
         'monthly_sales': monthly_sales,
+        'weekly_sales': weekly_sales,
+        'table_stats': table_stats,
+        'total_tables': total_tables,
+        'active_orders_count': active_orders_count,
         'category_sales': category_sales,
         'top_items': top_items,
         'sales_trend': sales_trend

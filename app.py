@@ -347,12 +347,14 @@ def add_table():
         return redirect(url_for('index'))
         
     table_number = request.form.get('table_number')
+    capacity = int(request.form.get('capacity', 4))
+    location = request.form.get('location', 'الصالة الرئيسية').strip()
+    
     if table_number:
         token = uuid.uuid4().hex
         slug = session['restaurant_slug']
         
         # Generate QR Code
-        # We point it to the dynamic customer table URL
         qr_url = f"{request.host_url}r/{slug}/table/{token}"
         qr = qrcode.QRCode(
             version=1,
@@ -367,10 +369,21 @@ def add_table():
         qr_filename = f"qr_{token}.png"
         qr_img.save(os.path.join(app.config['QRCODES_FOLDER'], qr_filename))
         
-        db.add_table(session['restaurant_id'], table_number, token, qr_filename)
+        db.add_table(session['restaurant_id'], table_number, token, qr_filename, capacity, location)
         flash(f"تم إضافة طاولة رقم {table_number} وتوليد الباركود الخاص بها.", "success")
         
     return redirect(url_for('restaurant_dashboard'))
+
+@app.route('/dashboard/table/update-status/<int:table_id>', methods=['POST'])
+def update_table_status(table_id):
+    if not session.get('restaurant_id'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    data = request.json
+    status = data.get('status')
+    if status in ['available', 'occupied', 'reserved', 'billing']:
+        db.update_table_status(table_id, status)
+        return jsonify({'success': True})
+    return jsonify({'error': 'Invalid status'}), 400
 
 @app.route('/dashboard/delete-table/<int:table_id>', methods=['POST'])
 def delete_table(table_id):
@@ -450,6 +463,8 @@ def api_get_orders():
             'table_number': o['table_number'],
             'total_price': o['total_price'],
             'status': o['status'],
+            'order_type': o['order_type'],
+            'notes': o['notes'],
             'created_at': o['created_at'],
             'items': items_list
         })
@@ -480,30 +495,47 @@ def api_create_order():
     table_id = data.get('table_id')
     token = data.get('token')
     items = data.get('items') # list of {menu_item_id, quantity, price}
+    order_type = data.get('order_type', 'dine_in')
     
-    if not restaurant_id or not table_id or not token or not items:
+    if not restaurant_id or not items:
         return jsonify({'error': 'Missing fields'}), 400
         
-    # Verify table token
-    table = db.get_table_by_token(token)
-    if not table or table['id'] != int(table_id) or table['restaurant_id'] != int(restaurant_id):
-        return jsonify({'error': 'Invalid table token'}), 403
-        
+    session_id = None
+    
+    if order_type == 'take_away':
+        # Find or create a mock 'سفري' table for this restaurant
+        conn = db.get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT id FROM tables WHERE restaurant_id = ? AND table_number = 'سفري'", (restaurant_id,))
+        row = cursor.fetchone()
+        if row:
+            table_id = row['id']
+        else:
+            mock_token = f"takeaway_{uuid.uuid4().hex[:8]}"
+            table_id = db.add_table(restaurant_id, 'سفري', mock_token, qr_code_path=None, capacity=0, location='سفري')
+        conn.close()
+        session_id = f"takeaway_{uuid.uuid4().hex[:8]}"
+    else:
+        if not table_id or not token:
+            return jsonify({'error': 'Missing fields for dine-in'}), 400
+        # Verify table token
+        table = db.get_table_by_token(token)
+        if not table or table['id'] != int(table_id) or table['restaurant_id'] != int(restaurant_id):
+            return jsonify({'error': 'Invalid table token'}), 403
+            
+        session_id = table['current_session_id']
+        if not session_id or table['status'] == 'available':
+            session_id = uuid.uuid4().hex
+            db.start_table_session(table_id, session_id)
+        elif table['status'] == 'billing':
+            db.set_table_status(table_id, 'occupied')
+            
     # Calculate total price
     total_price = sum(item['price'] * item['quantity'] for item in items)
+    notes = data.get('notes')
     
-    # 1. Manage Table Session & Turnover
-    session_id = table['current_session_id']
-    if not session_id or table['status'] == 'available':
-        # Start a brand new session
-        session_id = uuid.uuid4().hex
-        db.start_table_session(table_id, session_id)
-    elif table['status'] == 'billing':
-        # If table was billing but client ordered more, set status back to occupied
-        db.set_table_status(table_id, 'occupied')
-        
     try:
-        order_id = db.create_order(restaurant_id, table_id, total_price, items, session_id)
+        order_id = db.create_order(restaurant_id, table_id, total_price, items, session_id, order_type, notes)
         return jsonify({'success': True, 'order_id': order_id, 'session_id': session_id})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -527,7 +559,7 @@ def api_update_order_status(order_id):
         
     data = request.json
     status = data.get('status')
-    if status in ['pending', 'preparing', 'served', 'completed', 'paid', 'cancelled']:
+    if status in ['pending', 'preparing', 'served', 'billing', 'paid', 'cancelled', 'completed']:
         db.update_order_status(order_id, status)
         return jsonify({'success': True})
     return jsonify({'error': 'Invalid status'}), 400
