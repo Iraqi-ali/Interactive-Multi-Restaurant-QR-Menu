@@ -247,6 +247,13 @@ def update_settings():
             flash("نوع ملف الشعار غير مدعوم.", "error")
             return redirect(url_for('restaurant_dashboard'))
             
+    vat_enabled = 1 if request.form.get('vat_enabled') == 'on' else 0
+    vat_percentage_str = request.form.get('vat_percentage', '15.0')
+    try:
+        vat_percentage = float(vat_percentage_str)
+    except ValueError:
+        vat_percentage = 0.0
+
     if name:
         db.update_restaurant_settings(
             restaurant_id, 
@@ -257,6 +264,8 @@ def update_settings():
             theme_surface_color, 
             theme_text_color, 
             currency,
+            vat_enabled,
+            vat_percentage,
             logo_filename
         )
         session['restaurant_name'] = name
@@ -561,6 +570,30 @@ def api_update_order_status(order_id):
         
     data = request.json
     status = data.get('status')
+    password = data.get('password')
+    
+    if status == 'paid':
+        return jsonify({'error': 'manual_paid_forbidden', 'message': 'لا يمكن تغيير حالة الطلب إلى مدفوع يدوياً. يرجى تصفية حساب الطاولة بالكامل من قسم الطاولات.'}), 400
+        
+    if status == 'cancelled':
+        # Check current status of the order
+        conn = db.get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT status, restaurant_id FROM orders WHERE id = ?", (order_id,))
+        order = cursor.fetchone()
+        conn.close()
+        
+        if order:
+            current_status = order['status']
+            # If current status is preparing, served, or billing, check password
+            if current_status in ['preparing', 'served', 'billing']:
+                if not password:
+                    return jsonify({'error': 'password_required', 'message': 'إلغاء الطلب بعد التحضير أو طلب الفاتورة غير مسموح إلا بإدخال الرمز السري للمطعم.'}), 400
+                
+                # Verify password
+                if not db.verify_restaurant_password(order['restaurant_id'], password):
+                    return jsonify({'error': 'invalid_password', 'message': 'رمز السري للمطعم غير صحيح. لا يمكن إلغاء الطلب.'}), 403
+                    
     if status in ['pending', 'preparing', 'served', 'billing', 'paid', 'cancelled', 'completed']:
         db.update_order_status(order_id, status)
         return jsonify({'success': True})
@@ -606,15 +639,18 @@ def api_resolve_waiter_call(call_id):
 def api_get_table_invoice(table_id):
     token = request.args.get('token')
     authorized = False
+    restaurant_id = None
     
+    conn = db.get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT restaurant_id FROM tables WHERE id = ?", (table_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        restaurant_id = row['restaurant_id']
+        
     if session.get('restaurant_id'):
-        # Check if table belongs to this restaurant
-        conn = db.get_db()
-        cursor = conn.cursor()
-        cursor.execute("SELECT restaurant_id FROM tables WHERE id = ?", (table_id,))
-        row = cursor.fetchone()
-        conn.close()
-        if row and row['restaurant_id'] == session['restaurant_id']:
+        if restaurant_id == session['restaurant_id']:
             authorized = True
     elif token:
         # Check if token matches this table
@@ -622,9 +658,19 @@ def api_get_table_invoice(table_id):
         if table and table['id'] == table_id:
             authorized = True
             
-    if not authorized:
+    if not authorized or not restaurant_id:
         return jsonify({'error': 'Unauthorized'}), 401
         
+    # Get restaurant VAT settings
+    conn = db.get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT vat_enabled, vat_percentage FROM restaurants WHERE id = ?", (restaurant_id,))
+    rest = cursor.fetchone()
+    conn.close()
+    
+    vat_enabled = rest['vat_enabled'] if rest else 1
+    vat_percentage = rest['vat_percentage'] if rest else 15.0
+    
     items = db.get_table_invoice(table_id)
     invoice_items = []
     subtotal = 0
@@ -638,13 +684,14 @@ def api_get_table_invoice(table_id):
         })
         subtotal += row['item_total']
         
-    vat = subtotal * 0.15 # 15% VAT
+    vat = subtotal * (vat_percentage / 100.0) if vat_enabled == 1 else 0.0
     grand_total = subtotal + vat
     
     return jsonify({
         'items': invoice_items,
         'subtotal': subtotal,
         'vat': vat,
+        'vat_percentage': vat_percentage if vat_enabled == 1 else 0.0,
         'grand_total': grand_total
     })
 
@@ -656,6 +703,17 @@ def api_checkout_table(table_id):
     success = db.checkout_table(table_id)
     return jsonify({'success': success})
 
+@app.route('/api/restaurant/tables-status')
+def api_tables_status():
+    if not session.get('restaurant_id'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    conn = db.get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, table_number, status, current_session_id FROM tables WHERE restaurant_id = ?", (session['restaurant_id'],))
+    tables = [dict(r) for r in cursor.fetchall()]
+    conn.close()
+    return jsonify(tables)
+
 @app.route('/api/restaurant/analytics')
 def api_get_analytics():
     if not session.get('restaurant_id'):
@@ -663,6 +721,90 @@ def api_get_analytics():
         
     analytics = db.get_sales_analytics(session['restaurant_id'])
     return jsonify(analytics)
+
+@app.route('/dashboard/export-sales')
+def export_sales():
+    if not session.get('restaurant_id'):
+        return redirect(url_for('index'))
+        
+    restaurant_id = session['restaurant_id']
+    month = request.args.get('month') # e.g. '06'
+    year = request.args.get('year') # e.g. '2026'
+    
+    if not month or not year:
+        flash("يرجى تحديد الشهر والسنة للتصدير.", "error")
+        return redirect(url_for('restaurant_dashboard'))
+        
+    # Query invoices for this month and year
+    conn = db.get_db()
+    cursor = conn.cursor()
+    
+    query_date = f"{year}-{month}%"
+    cursor.execute("""
+        SELECT * FROM invoices 
+        WHERE restaurant_id = ? 
+          AND created_at LIKE ?
+        ORDER BY created_at DESC
+    """, (restaurant_id, query_date))
+    invoices = cursor.fetchall()
+    conn.close()
+    
+    # Prepare CSV data
+    import csv
+    import io
+    from flask import Response
+    
+    output = io.StringIO()
+    # UTF-8 BOM for Excel compatibility with Arabic
+    output.write('\ufeff')
+    writer = csv.writer(output)
+    
+    # Headers
+    writer.writerow([
+        'رقم الفاتورة',
+        'رقم الطاولة',
+        'تاريخ وتوقيت الفاتورة',
+        'المجموع الفرعي',
+        'قيمة الضريبة',
+        'نسبة الضريبة (%)',
+        'الإجمالي الكلي',
+        'العملة',
+        'الوجبات المطلوبة والكميات'
+    ])
+    
+    # Rows
+    for inv in invoices:
+        import json
+        try:
+            items = json.loads(inv['items_json'])
+            items_str = ", ".join([f"{item['name']} (x{item['quantity']})" for item in items])
+        except Exception:
+            items_str = ""
+            
+        writer.writerow([
+            inv['id'],
+            inv['table_number'],
+            inv['created_at'],
+            inv['subtotal'],
+            inv['vat_amount'],
+            inv['vat_rate'],
+            inv['total_amount'],
+            inv['currency'],
+            items_str
+        ])
+        
+    csv_data = output.getvalue()
+    output.close()
+    
+    filename = f"sales_report_{year}_{month}.csv"
+    return Response(
+        csv_data,
+        mimetype="text/csv",
+        headers={
+            "Content-disposition": f"attachment; filename={filename}",
+            "Content-Type": "text/csv; charset=utf-8"
+        }
+    )
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

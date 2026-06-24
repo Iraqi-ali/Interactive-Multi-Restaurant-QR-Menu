@@ -251,5 +251,127 @@ class TestQRMenuSystem(unittest.TestCase):
         self.assertEqual(row['theme_name'], "custom")
         print("Settings and Currency updated and verified in database successfully!")
 
+    def test_04_vat_and_order_protection_flow(self):
+        print("\n--- Test 4: VAT settings, Manual Paid Block, and Password Protected Cancellation ---")
+        
+        # 1. Reset user_id=2 password to '123456' for verification
+        from werkzeug.security import generate_password_hash
+        conn = db.get_db()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE users SET password = ? WHERE id = ?", (generate_password_hash("123456"), 2))
+        conn.commit()
+        
+        # Get restaurant and table info
+        cursor.execute("SELECT id FROM restaurants LIMIT 1")
+        restaurant_id = cursor.fetchone()['id']
+        
+        cursor.execute("SELECT id, token FROM tables WHERE restaurant_id = ? AND table_number != 'سفري' LIMIT 1", (restaurant_id,))
+        table = cursor.fetchone()
+        table_id = table['id']
+        token = table['token']
+        
+        # Get menu item
+        cursor.execute("SELECT id, price FROM menu_items LIMIT 1")
+        item = cursor.fetchone()
+        item_id = item['id']
+        item_price = item['price']
+        
+        # Configure VAT = 10.0% enabled on restaurant settings
+        db.update_restaurant_settings(
+            restaurant_id=restaurant_id,
+            name="المطعم التجريبي",
+            theme_name="custom",
+            primary_color="#ff0000",
+            bg_color="#ffffff",
+            surface_color="#f0f0f0",
+            text_color="#000000",
+            currency="USD",
+            vat_enabled=1,
+            vat_percentage=10.0
+        )
+        
+        conn.close()
+        
+        # Place a new Dine-in Order
+        order_payload = {
+            "restaurant_id": restaurant_id,
+            "table_id": table_id,
+            "token": token,
+            "order_type": "dine_in",
+            "items": [{"menu_item_id": item_id, "quantity": 1, "price": item_price}]
+        }
+        
+        response = self.client.post('/api/order/create', 
+                                    data=json.dumps(order_payload),
+                                    content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        order_id = json.loads(response.data)['order_id']
+        
+        # Try to manually change status to 'paid' (Forbidden)
+        response = self.client.post(f'/api/order/update-status/{order_id}',
+                                    data=json.dumps({"status": "paid"}),
+                                    content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(json.loads(response.data)['error'], 'manual_paid_forbidden')
+        print("Manual update to 'paid' status blocked successfully!")
+        
+        # Change status to 'preparing'
+        response = self.client.post(f'/api/order/update-status/{order_id}',
+                                    data=json.dumps({"status": "preparing"}),
+                                    content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        
+        # Try to cancel the order without password (Forbidden/Required)
+        response = self.client.post(f'/api/order/update-status/{order_id}',
+                                    data=json.dumps({"status": "cancelled"}),
+                                    content_type='application/json')
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(json.loads(response.data)['error'], 'password_required')
+        print("Cancellation of preparing order without password blocked successfully!")
+        
+        # Try to cancel with invalid password (Forbidden)
+        response = self.client.post(f'/api/order/update-status/{order_id}',
+                                    data=json.dumps({"status": "cancelled", "password": "wrongpassword"}),
+                                    content_type='application/json')
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(json.loads(response.data)['error'], 'invalid_password')
+        print("Cancellation of preparing order with wrong password blocked successfully!")
+        
+        # Cancel with correct password (Success)
+        response = self.client.post(f'/api/order/update-status/{order_id}',
+                                    data=json.dumps({"status": "cancelled", "password": "123456"}),
+                                    content_type='application/json')
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(json.loads(response.data)['success'])
+        print("Cancellation of preparing order with correct password succeeded!")
+        
+        # Place another order for checkout and invoice archiving verification
+        response = self.client.post('/api/order/create', 
+                                    data=json.dumps(order_payload),
+                                    content_type='application/json')
+        order_id_2 = json.loads(response.data)['order_id']
+        
+        # Checkout the table
+        with self.client.session_transaction() as sess:
+            sess['restaurant_id'] = restaurant_id
+            sess['user_id'] = 2
+            sess['role'] = 'restaurant'
+            
+        response = self.client.post(f'/api/restaurant/table/checkout/{table_id}')
+        self.assertEqual(response.status_code, 200)
+        
+        # Verify the archived invoice exists in the DB and matches the 10.0% VAT rate
+        conn = db.get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM invoices WHERE table_id = ? ORDER BY created_at DESC LIMIT 1", (table_id,))
+        invoice = cursor.fetchone()
+        conn.close()
+        
+        self.assertIsNotNone(invoice)
+        self.assertEqual(invoice['vat_rate'], 10.0)
+        self.assertEqual(invoice['vat_amount'], item_price * 0.1)
+        self.assertEqual(invoice['total_amount'], item_price * 1.1)
+        print("Archived invoice verified successfully with correct VAT calculation (10%)!")
+
 if __name__ == '__main__':
     unittest.main()

@@ -633,9 +633,9 @@
                     {% for table in tables %}
                     {% if table.table_number != 'سفري' %}
                     <div class="table-card-wrapper" data-location="{{ table.location }}">
-                        <div class="table-card desktop-card {{ table.status }}" style="padding: 15px;">
+                        <div class="table-card desktop-card {{ table.status }}" data-table-id="{{ table.id }}" data-table-number="{{ table.table_number }}" style="padding: 15px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                                <span style="font-family: var(--font-heading); font-weight: 800; font-size: 15px;">طاولة {{ table.table_number }}</span>
+                                <span class="table-num-span" style="font-family: var(--font-heading); font-weight: 800; font-size: 15px;">طاولة {{ table.table_number }}</span>
                                 <span class="table-location-badge">{{ table.location }}</span>
                             </div>
 
@@ -672,11 +672,11 @@
                             
                             <div style="display: flex; flex-direction: column; gap: 8px;">
                                 {% if table.status != 'available' %}
-                                    <button class="btn btn-primary" onclick="openInvoiceModal({{ table.id }}, '{{ table.table_number }}')" style="padding: 6px 12px; font-size: 12px; border-radius: 6px; width: 100%;">
+                                    <button class="btn btn-primary btn-checkout-trigger" onclick="openInvoiceModal({{ table.id }}, '{{ table.table_number }}')" style="padding: 6px 12px; font-size: 12px; border-radius: 6px; width: 100%;">
                                         <i class="fa-solid fa-file-invoice-dollar"></i> الفاتورة وتصفية الحساب
                                     </button>
                                 {% else %}
-                                    <button class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; border-radius: 6px; width: 100%; opacity: 0.5; cursor: not-allowed;" disabled>
+                                    <button class="btn btn-secondary btn-checkout-trigger" style="padding: 6px 12px; font-size: 12px; border-radius: 6px; width: 100%; opacity: 0.5; cursor: not-allowed;" disabled>
                                         <i class="fa-solid fa-circle-minus"></i> الطاولة فارغة حالياً
                                     </button>
                                 {% endif %}
@@ -846,6 +846,65 @@
                         </table>
                     </div>
                 </div>
+                
+                <!-- Excel Sales Report Downloader -->
+                <div class="desktop-card" style="margin-top: 20px;">
+                    <h4 style="font-family: var(--font-heading); font-size: 14px; margin-bottom: 15px;"><i class="fa-solid fa-file-excel" style="color: var(--success-color);"></i> تصدير تقرير المبيعات الشهري (Excel/CSV)</h4>
+                    <form action="/dashboard/export-sales" method="GET" style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                        <div style="flex: 1; min-width: 120px;">
+                            <label class="form-label" for="export_year" style="font-size: 12px;">السنة</label>
+                            <select id="export_year" name="year" class="form-control" style="padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); color: #fff; border: 1px solid var(--win11-border);">
+                                <option value="2025">2025</option>
+                                <option value="2026" selected>2026</option>
+                                <option value="2027">2027</option>
+                                <option value="2028">2028</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1; min-width: 120px;">
+                            <label class="form-label" for="export_month" style="font-size: 12px;">الشهر</label>
+                            <select id="export_month" name="month" class="form-control" style="padding: 8px; border-radius: 6px; background: rgba(0,0,0,0.3); color: #fff; border: 1px solid var(--win11-border);">
+                                <option value="01">يناير (01)</option>
+                                <option value="02">فبراير (02)</option>
+                                <option value="03">مارس (03)</option>
+                                <option value="04">أبريل (04)</option>
+                                <option value="05">مايو (05)</option>
+                                <option value="06" selected>يونيو (06)</option>
+                                <option value="07">يوليو (07)</option>
+                                <option value="08">أغسطس (08)</option>
+                                <option value="09">سبتمبر (09)</option>
+                                <option value="10">أكتوبر (10)</option>
+                                <option value="11">نوفمبر (11)</option>
+                                <option value="12">ديسمبر (12)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-success" style="padding: 10px 24px; border-radius: 6px; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-file-arrow-down"></i> تنزيل التقرير</button>
+                    </form>
+                </div>
+
+                <!-- Archived Invoices & Seating Order History -->
+                <div class="desktop-card" style="margin-top: 20px;">
+                    <h4 style="font-family: var(--font-heading); font-size: 14px; margin-bottom: 15px;"><i class="fa-solid fa-clock-rotate-left" style="color: var(--win11-accent);"></i> سجل الفواتير مؤرشفة وطلبات الطاولات المسواة</h4>
+                    <div style="overflow-x: auto; max-height: 350px; overflow-y: auto;">
+                        <table class="admin-table" id="invoices-history-table" style="text-align: right; width: 100%; font-size: 12px; border-collapse: collapse;">
+                            <thead>
+                                <tr style="border-bottom: 1px solid var(--win11-border); color: var(--text-secondary);">
+                                    <th style="padding: 10px 5px;">رقم الفاتورة</th>
+                                    <th style="padding: 10px 5px;">رقم الطاولة</th>
+                                    <th style="padding: 10px 5px;">تاريخ وتوقيت التسوية</th>
+                                    <th style="padding: 10px 5px;">المجموع الفرعي</th>
+                                    <th style="padding: 10px 5px;">الضريبة المستقطعة</th>
+                                    <th style="padding: 10px 5px;">الإجمالي الكلي</th>
+                                    <th style="padding: 10px 5px;">تفاصيل الوجبات والكميات</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 20px;">جاري تحميل سجل الفواتير...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
         
@@ -949,6 +1008,19 @@
                                     <input type="color" name="theme_text_color" value="{{ restaurant.theme_text_color or '#1e293b' }}" style="border: none; border-radius: 4px; width: 40px; height: 26px; cursor: pointer; background: transparent;">
                                 </div>
                             </div>
+                            
+                            <!-- VAT Tax configuration -->
+                            <div style="background: rgba(0,0,0,0.15); padding: 16px; border-radius: 8px; border: 1px solid var(--win11-border); display: flex; flex-direction: column; gap: 12px; margin-top: 10px;">
+                                <h5 style="margin: 0; font-size: 13px; font-family: var(--font-heading); display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-percent" style="color: var(--win11-accent);"></i> ضريبة القيمة المضافة (VAT)</h5>
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <input type="checkbox" id="vat_enabled" name="vat_enabled" {% if restaurant.vat_enabled == 1 %}checked{% endif %} style="cursor: pointer; width: 16px; height: 16px;">
+                                    <label for="vat_enabled" style="font-size: 12px; cursor: pointer; user-select: none;">تفعيل ضريبة القيمة المضافة على الفواتير</label>
+                                </div>
+                                <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                                    <label for="vat_percentage" style="font-size: 12px;">نسبة الضريبة الكلية (%)</label>
+                                    <input type="number" step="0.1" min="0" max="100" id="vat_percentage" name="vat_percentage" class="form-control" value="{{ restaurant.vat_percentage or '15.0' }}" style="width: 80px; padding: 4px 8px; font-size: 12px; border-radius: 6px; text-align: center; background: rgba(0,0,0,0.3); color: #fff;">
+                                </div>
+                            </div>
                         </div>
                         
                     </div>
@@ -997,7 +1069,7 @@
                     <span id="invoice-subtotal">0.00 {% if restaurant.currency == 'USD' %}${% else %}د.ع{% endif %}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; color: var(--text-secondary);">
-                    <span>ضريبة القيمة المضافة (15%)</span>
+                    <span id="invoice-vat-label">ضريبة القيمة المضافة (15%)</span>
                     <span id="invoice-vat">0.00 {% if restaurant.currency == 'USD' %}${% else %}د.ع{% endif %}</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; border-top: 1px solid var(--win11-border); padding-top: 8px; color: var(--success-color);">
@@ -1338,6 +1410,49 @@
             // Render latest orders list in Overview
             renderOverviewLatestOrders(orders);
             
+            // Fetch and update table status cards dynamically
+            const tablesRes = await fetch('/api/restaurant/tables-status');
+            const tablesData = await tablesRes.json();
+            tablesData.forEach(t => {
+                const card = document.querySelector(`.table-card[data-table-id="${t.id}"]`);
+                if (card) {
+                    // Update classes for status glow colors
+                    card.classList.remove('available', 'occupied', 'reserved', 'billing');
+                    card.classList.add(t.status);
+                    
+                    // Update manual control status select
+                    const select = card.querySelector('select');
+                    if (select) {
+                        select.value = t.status;
+                    }
+                    
+                    // Update Checkout/Status button dynamically
+                    const btnContainer = card.querySelector('div[style*="display: flex; flex-direction: column; gap: 8px;"]');
+                    if (btnContainer) {
+                        const triggerBtn = btnContainer.querySelector('.btn-checkout-trigger');
+                        if (triggerBtn) {
+                            if (t.status !== 'available') {
+                                triggerBtn.className = 'btn btn-primary btn-checkout-trigger';
+                                triggerBtn.disabled = false;
+                                triggerBtn.style.opacity = '1';
+                                triggerBtn.style.cursor = 'pointer';
+                                triggerBtn.innerHTML = '<i class="fa-solid fa-file-invoice-dollar"></i> الفاتورة وتصفية الحساب';
+                                triggerBtn.onclick = function() {
+                                    openInvoiceModal(t.id, t.table_number);
+                                };
+                            } else {
+                                triggerBtn.className = 'btn btn-secondary btn-checkout-trigger';
+                                triggerBtn.disabled = true;
+                                triggerBtn.style.opacity = '0.5';
+                                triggerBtn.style.cursor = 'not-allowed';
+                                triggerBtn.innerHTML = '<i class="fa-solid fa-circle-minus"></i> الطاولة فارغة حالياً';
+                                triggerBtn.onclick = null;
+                            }
+                        }
+                    }
+                }
+            });
+            
             // Check for new orders
             let isNewOrder = false;
             orders.forEach(o => {
@@ -1482,15 +1597,34 @@
         container.innerHTML = html;
     }
 
-    async function updateOrderStatus(orderId, status) {
+    async function updateOrderStatus(orderId, status, password = null) {
         try {
-            await fetch(`/api/order/update-status/${orderId}`, {
+            const res = await fetch(`/api/order/update-status/${orderId}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ status: status })
+                body: JSON.stringify({ status: status, password: password })
             });
+            const data = await res.json();
+            if (!res.ok) {
+                if (data.error === 'password_required') {
+                    const pwd = prompt(data.message || 'إلغاء هذا الطلب يتطلب إدخال الرمز السري للمطعم:');
+                    if (pwd !== null) {
+                        return updateOrderStatus(orderId, status, pwd);
+                    } else {
+                        pollDashboardData();
+                        return;
+                    }
+                } else {
+                    alert(data.message || 'حدث خطأ أثناء تحديث حالة الطلب.');
+                    pollDashboardData();
+                    return;
+                }
+            }
             pollDashboardData();
-        } catch (e) { console.error(e); }
+        } catch (e) {
+            console.error(e);
+            pollDashboardData();
+        }
     }
 
     async function resolveCall(callId) {
@@ -1558,6 +1692,12 @@
             }
             
             document.getElementById('invoice-subtotal').innerText = `${data.subtotal.toFixed(2)} ${currencyLabel}`;
+            
+            const vatLabel = document.getElementById('invoice-vat-label');
+            if (vatLabel) {
+                vatLabel.innerText = `ضريبة القيمة المضافة (${data.vat_percentage}%)`;
+            }
+            
             document.getElementById('invoice-vat').innerText = `${data.vat.toFixed(2)} ${currencyLabel}`;
             document.getElementById('invoice-total').innerText = `${data.grand_total.toFixed(2)} ${currencyLabel}`;
             
@@ -1612,6 +1752,40 @@
                         </tr>
                     `;
                 });
+            }
+            
+            // Render Archived Invoices history table
+            const invoicesTbody = document.querySelector('#invoices-history-table tbody');
+            if (invoicesTbody) {
+                invoicesTbody.innerHTML = '';
+                if (!data.archived_invoices || data.archived_invoices.length === 0) {
+                    invoicesTbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 20px;">لا توجد فواتير مؤرشفة بعد.</td></tr>';
+                } else {
+                    data.archived_invoices.forEach(inv => {
+                        let itemsList = [];
+                        try {
+                            const parsedItems = JSON.parse(inv.items_json);
+                            itemsList = parsedItems.map(item => `${item.name} (x${item.quantity})`);
+                        } catch (e) {
+                            console.error(e);
+                        }
+                        const itemsStr = itemsList.join(', ');
+                        const date = new Date(inv.created_at + 'Z');
+                        const dateStr = date.toLocaleString('ar-SA');
+                        
+                        invoicesTbody.innerHTML += `
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.03);">
+                                <td style="padding: 10px 5px; font-weight: bold;">#${inv.id}</td>
+                                <td style="padding: 10px 5px;">طاولة ${inv.table_number}</td>
+                                <td style="padding: 10px 5px; color: var(--text-secondary);">${dateStr}</td>
+                                <td style="padding: 10px 5px;">${inv.subtotal.toFixed(2)} ${inv.currency === 'USD' ? '$' : 'د.ع'}</td>
+                                <td style="padding: 10px 5px; color: var(--text-secondary);">${inv.vat_amount.toFixed(2)} ${inv.currency === 'USD' ? '$' : 'د.ع'} (${inv.vat_rate}%)</td>
+                                <td style="padding: 10px 5px; font-weight: 700; color: var(--success-color);">${inv.total_amount.toFixed(2)} ${inv.currency === 'USD' ? '$' : 'د.ع'}</td>
+                                <td style="padding: 10px 5px; color: var(--text-secondary); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${itemsStr}">${itemsStr}</td>
+                            </tr>
+                        `;
+                    });
+                }
             }
             
             // Render charts
@@ -1787,7 +1961,7 @@
                     }
                 </style>
             </head>
-            <body onload="window.print(); window.close();">
+            <body onload="setTimeout(function() { window.print(); setTimeout(function() { window.close(); }, 500); }, 500);">
                 <div class="header">
                     ${logoHtml}
                     <h2>{{ restaurant.name }}</h2>
@@ -1815,7 +1989,7 @@
                         <span>${currentInvoiceData.subtotal.toFixed(2)} ${currencyLabel}</span>
                     </div>
                     <div class="totals-row">
-                        <span>ضريبة القيمة المضافة (15%):</span>
+                        <span>ضريبة القيمة المضافة (${currentInvoiceData.vat_percentage}%):</span>
                         <span>${currentInvoiceData.vat.toFixed(2)} ${currencyLabel}</span>
                     </div>
                     <div class="totals-row" style="font-weight: bold; font-size: 12px; border-top: 1px dashed #000; padding-top: 4px;">

@@ -588,7 +588,7 @@
                     <span id="bill-subtotal">0.00 ر.س</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; color: var(--text-secondary);">
-                    <span class="lang-txt" data-key="bill_vat">ضريبة القيمة المضافة (15%)</span>
+                    <span id="bill-vat-label" class="lang-txt" data-key="bill_vat">ضريبة القيمة المضافة ({{ restaurant.vat_percentage if restaurant.vat_enabled == 1 else 0.0 }}%)</span>
                     <span id="bill-vat">0.00 ر.س</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; border-top: 1px solid var(--glass-border); padding-top: 8px; color: var(--success-color);">
@@ -665,7 +665,7 @@
             bill_title: 'تفاصيل الحساب الحالي',
             bill_empty: 'لا توجد طلبات جارية لتصفيها حالياً.',
             bill_subtotal: 'المجموع الفرعي',
-            bill_vat: 'ضريبة القيمة المضافة (15%)',
+            bill_vat: 'ضريبة القيمة المضافة (' + ({{ restaurant.vat_enabled or 0 }} === 1 ? '{{ restaurant.vat_percentage or 15.0 }}' : '0') + '%)',
             bill_total: 'المجموع الإجمالي',
             bill_waiting: '⏳ ننتظر النادل لاستلام الكاش وتصفير الطاولة...',
             close_bill: 'إغلاق الفاتورة',
@@ -715,7 +715,7 @@
             bill_title: 'Current Invoice Details',
             bill_empty: 'No active orders to checkout right now.',
             bill_subtotal: 'Subtotal',
-            bill_vat: 'VAT (15%)',
+            bill_vat: 'VAT (' + ({{ restaurant.vat_enabled or 0 }} === 1 ? '{{ restaurant.vat_percentage or 15.0 }}' : '0') + '%)',
             bill_total: 'Grand Total',
             bill_waiting: '⏳ Waiting for the waiter to collect cash and reset table...',
             close_bill: 'Close Invoice',
@@ -1117,6 +1117,17 @@
             }
             
             document.getElementById('bill-subtotal').innerText = `${data.subtotal.toFixed(2)} ${currencyLabel}`;
+            
+            // Update dynamic VAT rate in translations and label
+            const vatPercent = data.vat_percentage;
+            translations.ar.bill_vat = `ضريبة القيمة المضافة (${vatPercent}%)`;
+            translations.en.bill_vat = `VAT (${vatPercent}%)`;
+            
+            const vatLabel = document.getElementById('bill-vat-label');
+            if (vatLabel) {
+                vatLabel.innerText = currentLang === 'ar' ? translations.ar.bill_vat : translations.en.bill_vat;
+            }
+            
             document.getElementById('bill-vat').innerText = `${data.vat.toFixed(2)} ${currencyLabel}`;
             document.getElementById('bill-total').innerText = `${data.grand_total.toFixed(2)} ${currencyLabel}`;
             

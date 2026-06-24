@@ -124,6 +124,26 @@ def init_db():
     )
     ''')
     
+    # 9. Invoices Table (Archive)
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS invoices (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        restaurant_id INTEGER NOT NULL,
+        table_id INTEGER NOT NULL,
+        table_number TEXT NOT NULL,
+        session_id TEXT NOT NULL,
+        subtotal REAL NOT NULL,
+        vat_rate REAL NOT NULL,
+        vat_amount REAL NOT NULL,
+        total_amount REAL NOT NULL,
+        currency TEXT NOT NULL DEFAULT 'IQD',
+        items_json TEXT NOT NULL, -- JSON formatted list of items
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
+        FOREIGN KEY (table_id) REFERENCES tables(id) ON DELETE CASCADE
+    )
+    ''')
+    
     # Run migrations for existing databases to ensure columns exist
     try:
         cursor.execute("ALTER TABLE tables ADD COLUMN status TEXT NOT NULL DEFAULT 'available'")
@@ -177,12 +197,51 @@ def init_db():
         cursor.execute("ALTER TABLE restaurants ADD COLUMN currency TEXT NOT NULL DEFAULT 'IQD'")
     except sqlite3.OperationalError:
         pass
+    try:
+        cursor.execute("ALTER TABLE restaurants ADD COLUMN vat_enabled INTEGER DEFAULT 1")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE restaurants ADD COLUMN vat_percentage REAL DEFAULT 15.0")
+    except sqlite3.OperationalError:
+        pass
     
     # Create Default Super User if not exists
     cursor.execute("SELECT * FROM users WHERE username = 'admin'")
     if not cursor.fetchone():
         hashed_password = generate_password_hash("admin123")
         cursor.execute("INSERT INTO users (username, password, role) VALUES ('admin', ?, 'admin')", (hashed_password,))
+        
+    # Seed default restaurant data if not exists
+    cursor.execute("SELECT * FROM users WHERE username = 'مطعم المصطفى'")
+    if not cursor.fetchone():
+        # Insert restaurant user
+        cursor.execute("INSERT INTO users (username, password, role) VALUES ('مطعم المصطفى', 'scrypt:32768:8:1$67SVJnhHp42IZxAK$32c99bed398564b7829192ddb4d2f80fc23dc66805ab3a77d502f9ca43ae4ff52660bc7d18539f0b64f9bb220e51e99e7a1ded0dccdc46b86166fc25c0e6bda2', 'restaurant')")
+        user_id = cursor.lastrowid
+        
+        # Insert restaurant
+        cursor.execute("""
+            INSERT INTO restaurants (user_id, name, slug, logo, status, theme_name, theme_primary_color, theme_bg_color, theme_surface_color, theme_text_color, currency, vat_enabled, vat_percentage)
+            VALUES (?, 'المصطفى للبرغر الممتاز', 'mostafa', 'logo_mostafa_a71302.jpg', 'active', 'custom', '#00ff00', '#222222', '#333333', '#dddddd', 'USD', 1, 15.0)
+        """, (user_id,))
+        restaurant_id = cursor.lastrowid
+        
+        # Insert categories
+        cursor.execute("INSERT INTO categories (restaurant_id, name) VALUES (?, 'وجبات ساخنة')", (restaurant_id,))
+        cat_hot = cursor.lastrowid
+        cursor.execute("INSERT INTO categories (restaurant_id, name) VALUES (?, 'نارجيلة')", (restaurant_id,))
+        cat_hookah = cursor.lastrowid
+        
+        # Insert menu items
+        cursor.execute("INSERT INTO menu_items (category_id, name, description, price, available) VALUES (?, 'شاي', '', 500.0, 1)", (cat_hot,))
+        cursor.execute("INSERT INTO menu_items (category_id, name, description, price, available) VALUES (?, 'بابلية', '', 10000.0, 1)", (cat_hookah,))
+        cursor.execute("INSERT INTO menu_items (category_id, name, description, price, available) VALUES (?, 'خشب', '', 3000.0, 1)", (cat_hookah,))
+        
+        # Insert tables
+        cursor.execute("INSERT INTO tables (restaurant_id, table_number, token, qr_code_path, capacity, location) VALUES (?, '1', 'f8519936d21746f2845c227e362b74c3', 'qr_f8519936d21746f2845c227e362b74c3.png', 4, 'الصالة الرئيسية')", (restaurant_id,))
+        cursor.execute("INSERT INTO tables (restaurant_id, table_number, token, qr_code_path, capacity, location) VALUES (?, '2', '0572a4df409848009ae3886cdfee6a6b', 'qr_0572a4df409848009ae3886cdfee6a6b.png', 4, 'الصالة الرئيسية')", (restaurant_id,))
+        cursor.execute("INSERT INTO tables (restaurant_id, table_number, token, qr_code_path, capacity, location) VALUES (?, '3', 'ff457df6c73a436b9482ba5279ca8b8c', 'qr_ff457df6c73a436b9482ba5279ca8b8c.png', 4, 'الصالة الرئيسية')", (restaurant_id,))
+        cursor.execute("INSERT INTO tables (restaurant_id, table_number, token, qr_code_path, capacity, location) VALUES (?, 'سفري', 'takeaway_b7ba0b67', NULL, 0, 'سفري')", (restaurant_id,))
         
     conn.commit()
     conn.close()
@@ -526,10 +585,58 @@ def checkout_table(table_id):
     cursor = conn.cursor()
     try:
         # Get current session id
-        cursor.execute("SELECT current_session_id FROM tables WHERE id = ?", (table_id,))
+        cursor.execute("SELECT current_session_id, restaurant_id, table_number FROM tables WHERE id = ?", (table_id,))
         row = cursor.fetchone()
         if row and row['current_session_id']:
             session_id = row['current_session_id']
+            restaurant_id = row['restaurant_id']
+            table_number = row['table_number']
+            
+            # Fetch invoice items to archive
+            cursor.execute("""
+                SELECT m.name as item_name, SUM(oi.quantity) as quantity, oi.price, SUM(oi.quantity * oi.price) as item_total
+                FROM orders o
+                JOIN order_items oi ON oi.order_id = o.id
+                JOIN menu_items m ON oi.menu_item_id = m.id
+                WHERE o.table_id = ? 
+                  AND o.session_id = ?
+                  AND o.status != 'cancelled'
+                GROUP BY oi.menu_item_id, oi.price
+            """, (table_id, session_id))
+            items_rows = cursor.fetchall()
+            
+            if items_rows:
+                # Calculate subtotal
+                subtotal = sum(item['item_total'] for item in items_rows)
+                
+                # Fetch VAT settings
+                cursor.execute("SELECT vat_enabled, vat_percentage, currency FROM restaurants WHERE id = ?", (restaurant_id,))
+                rest = cursor.fetchone()
+                vat_enabled = rest['vat_enabled'] if rest else 1
+                vat_percentage = rest['vat_percentage'] if rest else 15.0
+                currency = rest['currency'] if rest else 'IQD'
+                
+                vat_amount = subtotal * (vat_percentage / 100.0) if vat_enabled == 1 else 0.0
+                total_amount = subtotal + vat_amount
+                
+                # Create items list JSON
+                items_list = []
+                for item in items_rows:
+                    items_list.append({
+                        'name': item['item_name'],
+                        'quantity': item['quantity'],
+                        'price': item['price'],
+                        'total': item['item_total']
+                    })
+                import json
+                items_json = json.dumps(items_list, ensure_ascii=False)
+                
+                # Insert into invoices table
+                cursor.execute("""
+                    INSERT INTO invoices (restaurant_id, table_id, table_number, session_id, subtotal, vat_rate, vat_amount, total_amount, currency, items_json)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (restaurant_id, table_id, table_number, session_id, subtotal, vat_percentage if vat_enabled else 0.0, vat_amount, total_amount, currency, items_json))
+                
             # 1. Update all orders of this session to 'paid'
             cursor.execute("UPDATE orders SET status = 'paid' WHERE table_id = ? AND session_id = ?", (table_id, session_id))
             # 2. Resolve waiter calls for this table
@@ -627,6 +734,15 @@ def get_sales_analytics(restaurant_id):
     """, (restaurant_id,))
     sales_trend = [dict(row) for row in cursor.fetchall()]
     
+    # 8. Archived Invoices (last 50 for history)
+    cursor.execute("""
+        SELECT * FROM invoices 
+        WHERE restaurant_id = ? 
+        ORDER BY created_at DESC 
+        LIMIT 50
+    """, (restaurant_id,))
+    archived_invoices = [dict(row) for row in cursor.fetchall()]
+    
     conn.close()
     return {
         'daily_sales': daily_sales,
@@ -637,23 +753,34 @@ def get_sales_analytics(restaurant_id):
         'active_orders_count': active_orders_count,
         'category_sales': category_sales,
         'top_items': top_items,
-        'sales_trend': sales_trend
+        'sales_trend': sales_trend,
+        'archived_invoices': archived_invoices
     }
 
-def update_restaurant_settings(restaurant_id, name, theme_name, primary_color, bg_color, surface_color, text_color, currency, logo=None):
+def update_restaurant_settings(restaurant_id, name, theme_name, primary_color, bg_color, surface_color, text_color, currency, vat_enabled=1, vat_percentage=15.0, logo=None):
     conn = get_db()
     cursor = conn.cursor()
     if logo:
         cursor.execute("""
             UPDATE restaurants 
-            SET name = ?, theme_name = ?, theme_primary_color = ?, theme_bg_color = ?, theme_surface_color = ?, theme_text_color = ?, currency = ?, logo = ?
+            SET name = ?, theme_name = ?, theme_primary_color = ?, theme_bg_color = ?, theme_surface_color = ?, theme_text_color = ?, currency = ?, vat_enabled = ?, vat_percentage = ?, logo = ?
             WHERE id = ?
-        """, (name, theme_name, primary_color, bg_color, surface_color, text_color, currency, logo, restaurant_id))
+        """, (name, theme_name, primary_color, bg_color, surface_color, text_color, currency, vat_enabled, vat_percentage, logo, restaurant_id))
     else:
         cursor.execute("""
             UPDATE restaurants 
-            SET name = ?, theme_name = ?, theme_primary_color = ?, theme_bg_color = ?, theme_surface_color = ?, theme_text_color = ?, currency = ?
+            SET name = ?, theme_name = ?, theme_primary_color = ?, theme_bg_color = ?, theme_surface_color = ?, theme_text_color = ?, currency = ?, vat_enabled = ?, vat_percentage = ?
             WHERE id = ?
-        """, (name, theme_name, primary_color, bg_color, surface_color, text_color, currency, restaurant_id))
+        """, (name, theme_name, primary_color, bg_color, surface_color, text_color, currency, vat_enabled, vat_percentage, restaurant_id))
     conn.commit()
     conn.close()
+
+def verify_restaurant_password(restaurant_id, password):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT u.password FROM users u JOIN restaurants r ON r.user_id = u.id WHERE r.id = ?", (restaurant_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return check_password_hash(row['password'], password)
+    return False
