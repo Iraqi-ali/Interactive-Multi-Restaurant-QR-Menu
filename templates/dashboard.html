@@ -1222,6 +1222,23 @@
     </div>
 </div>
 
+<!-- CONFIRMATION MODAL -->
+<div id="confirm-modal" class="modal">
+    <div class="modal-content win11-window" style="max-width: 380px; padding: 0;">
+        <div class="win11-window-header">
+            <div class="win11-window-title"><i class="fa-solid fa-circle-question"></i> تأكيد العملية</div>
+            <button class="modal-close" onclick="rejectConfirm()" style="position: static; font-size: 20px; color: var(--text-secondary); background: none; border: none; cursor: pointer;">&times;</button>
+        </div>
+        <div class="win11-window-body" style="padding: 20px; text-align: center;">
+            <p id="confirm-message" style="margin-bottom: 20px; color: var(--text-primary); font-size: 15px;">هل أنت متأكد؟</p>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-danger" style="flex: 1; border-radius: 6px;" onclick="acceptConfirm()"><i class="fa-solid fa-check"></i> نعم، تأكيد</button>
+                <button class="btn btn-secondary" style="flex: 1; border-radius: 6px;" onclick="rejectConfirm()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -1802,8 +1819,8 @@
     
     async function adjustOrderItemQty(itemId, newQuantity, orderId, orderStatus) {
         if (newQuantity <= 0) {
-            // If quantity would go to 0, delete the item
-            return deleteOrderItem(itemId, orderId, orderStatus);
+            // Reducing to 0 = delete the item (no confirmation needed for minus button)
+            return deleteOrderItemDirect(itemId, orderId, orderStatus);
         }
         
         // Restricted statuses require password
@@ -1818,9 +1835,7 @@
                     body: JSON.stringify({ quantity: newQuantity, password: pwd })
                 });
                 const data = await res.json();
-                if (!res.ok) {
-                    alert(data.message || 'حدث خطأ.');
-                }
+                if (!res.ok) { alert(data.message || 'حدث خطأ.'); }
             } catch(e) { console.error(e); }
             pollDashboardData();
             return;
@@ -1833,21 +1848,17 @@
                 body: JSON.stringify({ quantity: newQuantity })
             });
             const data = await res.json();
-            if (!res.ok) {
-                alert(data.message || 'حدث خطأ.');
-            }
+            if (!res.ok) { alert(data.message || 'حدث خطأ.'); }
         } catch(e) { console.error(e); }
         pollDashboardData();
     }
     
-    async function deleteOrderItem(itemId, orderId, orderStatus) {
-        if (!confirm('هل أنت متأكد من حذف هذه الوجبة من الطلب؟')) return;
-        
+    // Delete without confirmation (called from minus button when qty reaches 0)
+    async function deleteOrderItemDirect(itemId, orderId, orderStatus) {
         // Restricted statuses require password
         if (orderStatus === 'billing' || orderStatus === 'served' || orderStatus === 'paid') {
             const pwd = await promptPassword('حذف الوجبة من الطلب في هذه الحالة يتطلب الرمز السري للمطعم:');
             if (!pwd) return;
-            
             try {
                 const res = await fetch(`/api/order/item/delete/${itemId}`, {
                     method: 'POST',
@@ -1855,9 +1866,7 @@
                     body: JSON.stringify({ password: pwd })
                 });
                 const data = await res.json();
-                if (!res.ok) {
-                    alert(data.message || 'حدث خطأ.');
-                }
+                if (!res.ok) { alert(data.message || 'حدث خطأ.'); }
             } catch(e) { console.error(e); }
             pollDashboardData();
             return;
@@ -1869,11 +1878,16 @@
                 headers: { 'Content-Type': 'application/json' }
             });
             const data = await res.json();
-            if (!res.ok) {
-                alert(data.message || 'حدث خطأ.');
-            }
+            if (!res.ok) { alert(data.message || 'حدث خطأ.'); }
         } catch(e) { console.error(e); }
         pollDashboardData();
+    }
+    
+    // Delete with confirmation (called from trash button) - uses custom modal
+    async function deleteOrderItem(itemId, orderId, orderStatus) {
+        const confirmed = await promptConfirm('هل أنت متأكد من حذف هذه الوجبة من الطلب؟');
+        if (!confirmed) return;
+        return deleteOrderItemDirect(itemId, orderId, orderStatus);
     }
     
     function promptPassword(message) {
@@ -1900,6 +1914,31 @@
         if (window._pwdResolve) {
             window._pwdResolve(null);
             window._pwdResolve = null;
+        }
+    }
+    
+    // Custom confirmation modal (replaces browser confirm())
+    function promptConfirm(message) {
+        return new Promise((resolve) => {
+            document.getElementById('confirm-message').innerText = message || 'هل أنت متأكد؟';
+            document.getElementById('confirm-modal').style.display = 'flex';
+            window._confirmResolve = resolve;
+        });
+    }
+    
+    function acceptConfirm() {
+        document.getElementById('confirm-modal').style.display = 'none';
+        if (window._confirmResolve) {
+            window._confirmResolve(true);
+            window._confirmResolve = null;
+        }
+    }
+    
+    function rejectConfirm() {
+        document.getElementById('confirm-modal').style.display = 'none';
+        if (window._confirmResolve) {
+            window._confirmResolve(false);
+            window._confirmResolve = null;
         }
     }
 

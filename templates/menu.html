@@ -1318,8 +1318,19 @@
         }
     }
 
-    // Customer Invoice details fetch & modal display
+    // Customer Invoice details fetch & modal display (+ check order status first)
     async function requestBillDetails() {
+        // Check if any order is at least in 'preparing' status before allowing bill request
+        try {
+            const statusRes = await fetch(`/api/table/full-invoice/${tableId}?token=${tableToken}`);
+            const statusData = await statusRes.json();
+            
+            if (!statusData.items || statusData.items.length === 0) {
+                alert(currentLang === 'ar' ? 'لا يمكن طلب الفاتورة قبل إرسال طلب واحد على الأقل وتأكيده من المطبخ.' : 'Cannot request bill before at least one order is confirmed by the kitchen.');
+                return;
+            }
+        } catch(e) { console.error(e); return; }
+        
         try {
             const res = await fetch(`/api/restaurant/table/invoice/${tableId}?token=${tableToken}`);
             const data = await res.json();
