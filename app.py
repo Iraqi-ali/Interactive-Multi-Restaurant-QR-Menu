@@ -290,6 +290,7 @@ def update_settings():
             
     vat_enabled = 1 if request.form.get('vat_enabled') == 'on' else 0
     vat_percentage_str = request.form.get('vat_percentage', '15.0')
+    payment_mode = request.form.get('payment_mode', 'post_paid')
     try:
         vat_percentage = float(vat_percentage_str)
     except ValueError:
@@ -311,7 +312,8 @@ def update_settings():
             phone,
             address,
             announcement,
-            menu_bg_filename
+            menu_bg_filename,
+            payment_mode
         )
         session['restaurant_name'] = name
         flash("تم حفظ إعدادات المظهر والبيانات بنجاح.", "success")
@@ -599,8 +601,22 @@ def api_create_order():
     total_price = sum(item['price'] * item['quantity'] for item in items)
     notes = data.get('notes')
     
+    # Check if restaurant uses pre-paid mode
+    conn = db.get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT payment_mode FROM restaurants WHERE id = ?", (restaurant_id,))
+    rest_row = cursor.fetchone()
+    conn.close()
+    
+    pre_paid = (rest_row and rest_row['payment_mode'] == 'pre_paid')
+    
     try:
         order_id = db.create_order(restaurant_id, table_id, total_price, items, session_id, order_type, notes)
+        
+        if pre_paid:
+            db.update_order_status(order_id, 'awaiting_payment')
+            return jsonify({'success': True, 'order_id': order_id, 'session_id': session_id, 'pre_paid': True, 'message': 'يرجى انتظار تأكيد الدفع من الكاشير.'})
+        
         return jsonify({'success': True, 'order_id': order_id, 'session_id': session_id})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -676,6 +692,31 @@ def api_update_order_status(order_id):
             return jsonify({'success': True})
         return jsonify({'success': True})
     return jsonify({'error': 'Invalid status'}), 400
+
+# --- CUSTOMER CANCEL ORDER (no login, token-based) ---
+@app.route('/api/order/confirm-payment/<int:order_id>', methods=['POST'])
+def api_confirm_payment(order_id):
+    """Cashier confirms payment for pre-paid order, moves it to 'pending' for kitchen."""
+    if not session.get('restaurant_id'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    conn = db.get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT status, restaurant_id FROM orders WHERE id = ?", (order_id,))
+    order = cursor.fetchone()
+    conn.close()
+    
+    if not order:
+        return jsonify({'error': 'Order not found'}), 404
+    
+    if order['restaurant_id'] != session.get('restaurant_id'):
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    if order['status'] != 'awaiting_payment':
+        return jsonify({'error': 'invalid_status', 'message': 'هذا الطلب ليس في حالة انتظار الدفع.'}), 400
+    
+    db.update_order_status(order_id, 'pending')
+    return jsonify({'success': True, 'message': 'تم تأكيد الدفع وإرسال الطلب إلى المطبخ.'})
 
 # --- CUSTOMER CANCEL ORDER (no login, token-based) ---
 @app.route('/api/order/cancel/<int:order_id>', methods=['POST'])

@@ -1109,6 +1109,11 @@
                 localStorage.setItem(`tracked_order_${restaurantId}_${tableId}`, result.order_id);
                 startTrackingOrder(result.order_id);
                 
+                if (result.pre_paid) {
+                    updateTrackerUI('awaiting_payment', true);
+                    showToast(result.message || 'يرجى انتظار تأكيد الدفع من الكاشير.');
+                }
+                
                 // Reload page in 3 seconds to update table state indicator
                 setTimeout(() => location.reload(), 3000);
             } else {
@@ -1154,9 +1159,9 @@
         const desc = document.getElementById('tracker-status-description');
         const cancelBtn = document.getElementById('btn-cancel-order');
         
-        // Show cancel button only when status is 'pending'
+        // Show cancel button only when status is 'pending' or 'awaiting_payment'
         if (cancelBtn) {
-            cancelBtn.style.display = (status === 'pending') ? 'block' : 'none';
+            cancelBtn.style.display = (status === 'pending' || status === 'awaiting_payment') ? 'block' : 'none';
         }
         
         // Helper to set step states
@@ -1229,6 +1234,10 @@
             stepPending.classList.add('active');
             progressBar.style.width = '0%';
             desc.innerHTML = translations[currentLang].status_pending;
+        } else if (status === 'awaiting_payment') {
+            stepPending.classList.add('active');
+            progressBar.style.width = '0%';
+            desc.innerHTML = '💳 ' + (currentLang === 'ar' ? 'بانتظار تأكيد الدفع من الكاشير قبل إرسال الطلب إلى المطبخ...' : 'Awaiting payment confirmation before sending to kitchen...');
         } else if (status === 'preparing') {
             stepPending.classList.add('completed');
             stepPreparing.classList.add('active');

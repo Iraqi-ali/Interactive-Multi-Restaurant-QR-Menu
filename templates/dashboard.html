@@ -546,6 +546,7 @@
                             <h3 class="section-title" style="font-size: 16px; margin: 0;"><i class="fa-solid fa-clipboard-list"></i> طلبات المطبخ النشطة</h3>
                             <div class="win11-tab-bar" style="display: flex; gap: 5px; background: rgba(0,0,0,0.2); padding: 4px; border-radius: 8px; border: 1px solid var(--win11-border);">
                                 <button class="win11-tab active" onclick="setOrdersFilter('all', this)" style="border: none; background: transparent; color: #fff; padding: 4px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s;">الكل</button>
+                                <button class="win11-tab" onclick="setOrdersFilter('awaiting_payment', this)" style="border: none; background: transparent; color: #a0aec0; padding: 4px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s;">بانتظار الدفع</button>
                                 <button class="win11-tab" onclick="setOrdersFilter('pending', this)" style="border: none; background: transparent; color: #a0aec0; padding: 4px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s;">جديد</button>
                                 <button class="win11-tab" onclick="setOrdersFilter('preparing', this)" style="border: none; background: transparent; color: #a0aec0; padding: 4px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s;">يحضر</button>
                                 <button class="win11-tab" onclick="setOrdersFilter('served', this)" style="border: none; background: transparent; color: #a0aec0; padding: 4px 12px; font-size: 12px; border-radius: 6px; cursor: pointer; transition: all 0.2s;">يتم التقديم</button>
@@ -1056,6 +1057,22 @@
                                     <label for="vat_percentage" style="font-size: 12px;">نسبة الضريبة الكلية (%)</label>
                                     <input type="number" step="0.1" min="0" max="100" id="vat_percentage" name="vat_percentage" class="form-control" value="{{ restaurant.vat_percentage or '15.0' }}" style="width: 80px; padding: 4px 8px; font-size: 12px; border-radius: 6px; text-align: center; background: rgba(0,0,0,0.3); color: #fff;">
                                 </div>
+                            </div>
+                            
+                            <!-- Payment Mode -->
+                            <div style="background: rgba(0,0,0,0.15); padding: 16px; border-radius: 8px; border: 1px solid var(--win11-border); display: flex; flex-direction: column; gap: 12px;">
+                                <h5 style="margin: 0; font-size: 13px; font-family: var(--font-heading); display: flex; align-items: center; gap: 6px;"><i class="fa-solid fa-credit-card" style="color: var(--success-color);"></i> طريقة الدفع</h5>
+                                <div style="display: flex; gap: 10px;">
+                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; padding: 8px 12px; border-radius: 8px; background: {% if restaurant.payment_mode == 'post_paid' or not restaurant.payment_mode %}rgba(0,230,118,0.1){% else %}rgba(255,255,255,0.03){% endif %}; border: 1px solid {% if restaurant.payment_mode == 'post_paid' or not restaurant.payment_mode %}rgba(0,230,118,0.3){% else %}var(--win11-border){% endif %}; flex: 1;">
+                                        <input type="radio" name="payment_mode" value="post_paid" {% if restaurant.payment_mode == 'post_paid' or not restaurant.payment_mode %}checked{% endif %} style="cursor: pointer;">
+                                        <span>💵 الدفع بعد التقديم</span>
+                                    </label>
+                                    <label style="display: flex; align-items: center; gap: 6px; cursor: pointer; font-size: 13px; padding: 8px 12px; border-radius: 8px; background: {% if restaurant.payment_mode == 'pre_paid' %}rgba(255,145,0,0.1){% else %}rgba(255,255,255,0.03){% endif %}; border: 1px solid {% if restaurant.payment_mode == 'pre_paid' %}rgba(255,145,0,0.3){% else %}var(--win11-border){% endif %}; flex: 1;">
+                                        <input type="radio" name="payment_mode" value="pre_paid" {% if restaurant.payment_mode == 'pre_paid' %}checked{% endif %} style="cursor: pointer;">
+                                        <span>🔒 الدفع المسبق</span>
+                                    </label>
+                                </div>
+                                <span style="font-size: 10px; color: var(--text-secondary);">في وضع الدفع المسبق: لا يتم إرسال الطلب إلى المطبخ حتى يتم تأكيد الدفع من قبل الكاشير.</span>
                             </div>
                         </div>
                         
@@ -1582,7 +1599,8 @@
         let html = '';
         filteredOrders.forEach(o => {
             let statusLabel = '';
-            if (o.status === 'pending') statusLabel = '⏳ قيد الانتظار';
+            if (o.status === 'awaiting_payment') statusLabel = '💳 بانتظار تأكيد الدفع';
+            else if (o.status === 'pending') statusLabel = '⏳ قيد الانتظار';
             else if (o.status === 'preparing') statusLabel = '🍳 يتم التحضير';
             else if (o.status === 'served') statusLabel = '🍽️ تم التقديم';
             else if (o.status === 'billing') statusLabel = '💳 بانتظار الدفع';
@@ -1598,13 +1616,13 @@
                             <span class="order-item-qty">x${item.quantity}</span>
                             <span style="color: var(--text-secondary);">${item.price} ${currencyLabel}</span>
                             ${(o.status === 'pending' || o.status === 'preparing') ? `
-                            <button class="btn btn-sm" onclick="event.stopPropagation(); adjustOrderItemQty(${itemId}, ${item.quantity - 1}, ${o.id}, '${o.status}')" style="padding: 2px 6px; font-size: 10px; border-radius: 4px; background: rgba(255,255,255,0.1); border: none; color: #ff9100; cursor: pointer;" title="تقليل الكمية">
+                            <button type="button" class="btn btn-sm" onclick="adjustOrderItemQty(${itemId}, ${item.quantity - 1}, ${o.id}, '${o.status}')" style="padding: 2px 6px; font-size: 10px; border-radius: 4px; background: rgba(255,255,255,0.1); border: none; color: #ff9100; cursor: pointer;" title="تقليل الكمية">
                                 <i class="fa-solid fa-minus"></i>
                             </button>
-                            <button class="btn btn-sm" onclick="event.stopPropagation(); adjustOrderItemQty(${itemId}, ${item.quantity + 1}, ${o.id}, '${o.status}')" style="padding: 2px 6px; font-size: 10px; border-radius: 4px; background: rgba(255,255,255,0.1); border: none; color: var(--success-color); cursor: pointer;" title="زيادة الكمية">
+                            <button type="button" class="btn btn-sm" onclick="adjustOrderItemQty(${itemId}, ${item.quantity + 1}, ${o.id}, '${o.status}')" style="padding: 2px 6px; font-size: 10px; border-radius: 4px; background: rgba(255,255,255,0.1); border: none; color: var(--success-color); cursor: pointer;" title="زيادة الكمية">
                                 <i class="fa-solid fa-plus"></i>
                             </button>
-                            <button class="btn btn-sm" onclick="event.stopPropagation(); deleteOrderItem(${itemId}, ${o.id}, '${o.status}')" style="padding: 2px 6px; font-size: 10px; border-radius: 4px; background: rgba(255,23,68,0.15); border: none; color: var(--danger-color); cursor: pointer;" title="حذف الوجبة من الطلب">
+                            <button type="button" class="btn btn-sm" onclick="deleteOrderItem(${itemId}, ${o.id}, '${o.status}')" style="padding: 2px 6px; font-size: 10px; border-radius: 4px; background: rgba(255,23,68,0.15); border: none; color: var(--danger-color); cursor: pointer;" title="حذف الوجبة من الطلب">
                                 <i class="fa-solid fa-trash"></i>
                             </button>
                             ` : ''}
@@ -1636,6 +1654,9 @@
                         <div class="order-total-price">المجموع: ${o.total_price.toFixed(2)} ${currencyLabel}</div>
                     </div>
                     <div class="feed-card-actions">
+                        ${o.status === 'awaiting_payment' ? `
+                        <button class="btn btn-success" onclick="confirmPayment(${o.id})" style="padding: 6px 12px; font-size: 12px; border-radius: 6px; width: 100%;"><i class="fa-solid fa-circle-check"></i> تأكيد الدفع وإرسال للمطبخ</button>
+                        ` : `
                         <select onchange="updateOrderStatus(${o.id}, this.value)" style="border-radius: 6px; padding: 6px;">
                             <option value="pending" ${o.status === 'pending' ? 'selected' : ''}>⏳ قيد الانتظار</option>
                             <option value="preparing" ${o.status === 'preparing' ? 'selected' : ''}>🍳 يتم التحضير</option>
@@ -1644,6 +1665,7 @@
                             <option value="paid" ${o.status === 'paid' ? 'selected' : ''}>💵 مدفوع</option>
                             <option value="cancelled" ${o.status === 'cancelled' ? 'selected' : ''}>❌ إلغاء الطلب</option>
                         </select>
+                        `}
                     </div>
                 </div>
             `;
@@ -1718,6 +1740,19 @@
             await fetch(`/api/waiter-call/resolve/${callId}`, { method: 'POST' });
             pollDashboardData();
         } catch (e) { console.error(e); }
+    }
+
+    async function confirmPayment(orderId) {
+        try {
+            const res = await fetch(`/api/order/confirm-payment/${orderId}`, { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+                showTrayNotification('تأكيد الدفع', 'تم تأكيد الدفع وإرسال الطلب إلى المطبخ بنجاح.');
+                pollDashboardData();
+            } else {
+                alert(data.message || 'حدث خطأ.');
+            }
+        } catch(e) { console.error(e); }
     }
 
     // Windows 11 Sliding System Notifications Center
