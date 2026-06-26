@@ -245,6 +245,56 @@
         --glass-bg: {{ restaurant.theme_surface_color or '#ffffff' }}cc;
         --glass-border: {{ restaurant.theme_primary_color or '#059669' }}22;
         --card-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        {% elif restaurant.theme_name == 'crystal_glass' %}
+        --bg-primary: #f0f4ff;
+        --bg-secondary: rgba(255, 255, 255, 0.7);
+        --accent-color: #6366f1;
+        --accent-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a78bfa 100%);
+        --text-primary: #1e1b4b;
+        --text-secondary: #6b7280;
+        --glass-bg: rgba(255, 255, 255, 0.55);
+        --glass-border: rgba(99, 102, 241, 0.12);
+        --card-shadow: 0 8px 32px rgba(99, 102, 241, 0.08);
+        {% elif restaurant.theme_name == 'arabian_nights' %}
+        --bg-primary: #0c0a1d;
+        --bg-secondary: #1a1635;
+        --accent-color: #d4a853;
+        --accent-gradient: linear-gradient(135deg, #d4a853 0%, #b8860b 50%, #f0c060 100%);
+        --text-primary: #f5f0e8;
+        --text-secondary: #8b8468;
+        --glass-bg: rgba(26, 22, 53, 0.75);
+        --glass-border: rgba(212, 168, 83, 0.15);
+        --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+        {% elif restaurant.theme_name == 'nordic_minimal' %}
+        --bg-primary: #fafaf9;
+        --bg-secondary: #ffffff;
+        --accent-color: #4f6d5c;
+        --accent-gradient: linear-gradient(135deg, #4f6d5c 0%, #7a9e7e 100%);
+        --text-primary: #1c1917;
+        --text-secondary: #78716c;
+        --glass-bg: rgba(255, 255, 255, 0.9);
+        --glass-border: rgba(79, 109, 92, 0.08);
+        --card-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+        {% elif restaurant.theme_name == 'sunset_blvd' %}
+        --bg-primary: #fff7ed;
+        --bg-secondary: #ffffff;
+        --accent-color: #ea580c;
+        --accent-gradient: linear-gradient(135deg, #f97316 0%, #ec4899 100%);
+        --text-primary: #431407;
+        --text-secondary: #9a3412;
+        --glass-bg: rgba(255, 255, 255, 0.8);
+        --glass-border: rgba(249, 115, 22, 0.1);
+        --card-shadow: 0 8px 30px rgba(249, 115, 22, 0.06);
+        {% elif restaurant.theme_name == 'noir_elegance' %}
+        --bg-primary: #0a0a0a;
+        --bg-secondary: #171717;
+        --accent-color: #c9a84c;
+        --accent-gradient: linear-gradient(135deg, #c9a84c 0%, #e2c87a 100%);
+        --text-primary: #f5f5f5;
+        --text-secondary: #737373;
+        --glass-bg: rgba(23, 23, 23, 0.8);
+        --glass-border: rgba(201, 168, 76, 0.12);
+        --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
         {% endif %}
     }
 
