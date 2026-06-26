@@ -42,9 +42,6 @@
                     <a href="/#login" class="nav-link"><i class="fa-solid fa-right-to-bracket"></i> دخول</a>
                     <a href="/#register" class="nav-link btn-primary-nav">ابدأ الآن</a>
                 {% endif %}
-                <button class="theme-toggle-btn" id="theme-toggle" title="تبديل الوضع الليلي/النهاري" aria-label="تبديل المظهر">
-                    <i class="fa-solid fa-moon" id="theme-icon"></i>
-                </button>
             </nav>
         </div>
     </header>
@@ -82,29 +79,6 @@
     <script>
         // Update copyright year automatically
         document.getElementById('current-year').textContent = new Date().getFullYear();
-        
-        // Theme Toggle (Day/Night Mode)
-        (function() {
-            const body = document.body;
-            const toggleBtn = document.getElementById('theme-toggle');
-            const icon = document.getElementById('theme-icon');
-            
-            // Check saved preference
-            const savedTheme = localStorage.getItem('app_theme');
-            if (savedTheme === 'light') {
-                body.classList.add('light-mode');
-                if (icon) { icon.className = 'fa-solid fa-sun'; }
-            }
-            
-            if (toggleBtn && icon) {
-                toggleBtn.addEventListener('click', function() {
-                    body.classList.toggle('light-mode');
-                    const isLight = body.classList.contains('light-mode');
-                    icon.className = isLight ? 'fa-solid fa-sun' : 'fa-solid fa-moon';
-                    localStorage.setItem('app_theme', isLight ? 'light' : 'dark');
-                });
-            }
-        })();
         
         // Auto-dismiss flash messages after 4 seconds
         setTimeout(() => {

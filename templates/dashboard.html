@@ -239,11 +239,10 @@
     /* Windows 11 Fluent Grid cards */
     .desktop-card {
         background: rgba(255, 255, 255, 0.02);
-        border: 1px solid var(--card-border);
+        border: 1px solid var(--win11-border);
         border-radius: 8px;
         padding: 16px;
         transition: all 0.2s ease;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.12);
     }
     
     .desktop-card:hover {
@@ -664,16 +663,12 @@
 
                             <div style="margin-bottom: 12px;">
                                 <label style="font-size: 10px; color: var(--text-secondary); display: block; margin-bottom: 4px;">الحالة والتحكم اليدوي:</label>
-                                <button class="btn btn-secondary table-status-btn" onclick="openTableStatusBottomSheet({{ table.id }}, '{{ table.status }}')" style="width: 100%; min-height: var(--touch-target); font-size: 12px; border-radius: 6px; padding: 8px 12px; border: 1px solid var(--card-border);">
-                                    <span id="table-status-label-{{ table.id }}">
-                                        {% if table.status == 'available' %}🟢 متاح (Available)
-                                        {% elif table.status == 'occupied' %}🔵 مشغول (Occupied)
-                                        {% elif table.status == 'reserved' %}🟡 محجوز (Reserved)
-                                        {% elif table.status == 'billing' %}🔴 يطلب الحساب (Billing)
-                                        {% endif %}
-                                    </span>
-                                    <i class="fa-solid fa-chevron-up" style="margin-right: auto; font-size: 10px;"></i>
-                                </button>
+                                <select class="form-control" onchange="changeTableStatusManual({{ table.id }}, this.value)" style="font-size: 11px; padding: 5px 8px; border-radius: 6px; background: rgba(0,0,0,0.3); color: #fff; width: 100%; border: 1px solid var(--win11-border);">
+                                    <option value="available" {% if table.status == 'available' %}selected{% endif %}>🟢 متاح (Available)</option>
+                                    <option value="occupied" {% if table.status == 'occupied' %}selected{% endif %}>🔵 مشغول (Occupied)</option>
+                                    <option value="reserved" {% if table.status == 'reserved' %}selected{% endif %}>🟡 محجوز (Reserved)</option>
+                                    <option value="billing" {% if table.status == 'billing' %}selected{% endif %}>🔴 يطلب الحساب (Billing)</option>
+                                </select>
                             </div>
                             
                             <div style="display: flex; flex-direction: column; gap: 8px;">
@@ -1309,71 +1304,6 @@
     function closeModal(id) {
         document.getElementById(id).style.display = 'none';
     }
-    
-    // ========== BOTTOM SHEET: Order Status ==========
-    function openStatusBottomSheet(orderId, currentStatus) {
-        document.getElementById('bs-order-id').innerText = orderId;
-        const optionsBody = document.getElementById('status-options-body');
-        
-        const statuses = [
-            { value: 'pending', icon: '⏳', label: 'قيد الانتظار' },
-            { value: 'preparing', icon: '🍳', label: 'يتم التحضير' },
-            { value: 'served', icon: '🍽️', label: 'تم التقديم للعميل' },
-            { value: 'billing', icon: '💳', label: 'بانتظار الدفع' },
-            { value: 'paid', icon: '💵', label: 'مدفوع' },
-            { value: 'cancelled', icon: '❌', label: 'إلغاء الطلب' }
-        ];
-        
-        optionsBody.innerHTML = statuses.map(s => `
-            <button class="bottom-sheet-option ${s.value === currentStatus ? 'selected' : ''}" 
-                    onclick="updateOrderStatus(${orderId}, '${s.value}'); closeStatusBottomSheet();">
-                <span class="option-icon">${s.icon}</span>
-                <span>${s.label}</span>
-            </button>
-        `).join('');
-        
-        document.getElementById('status-bottom-sheet').classList.add('active');
-    }
-    
-    function closeStatusBottomSheet() {
-        document.getElementById('status-bottom-sheet').classList.remove('active');
-    }
-    
-    // ========== BOTTOM SHEET: Table Status ==========
-    let activeTableStatusId = null;
-    
-    function openTableStatusBottomSheet(tableId, currentStatus) {
-        activeTableStatusId = tableId;
-        const optionsBody = document.getElementById('table-status-options-body');
-        
-        const statuses = [
-            { value: 'available', icon: '🟢', label: 'متاح (Available)' },
-            { value: 'occupied', icon: '🔵', label: 'مشغول (Occupied)' },
-            { value: 'reserved', icon: '🟡', label: 'محجوز (Reserved)' },
-            { value: 'billing', icon: '🔴', label: 'يطلب الحساب (Billing)' }
-        ];
-        
-        optionsBody.innerHTML = statuses.map(s => `
-            <button class="bottom-sheet-option ${s.value === currentStatus ? 'selected' : ''}" 
-                    onclick="changeTableStatusManual(${tableId}, '${s.value}'); closeTableStatusBottomSheet();">
-                <span class="option-icon">${s.icon}</span>
-                <span>${s.label}</span>
-            </button>
-        `).join('');
-        
-        document.getElementById('table-status-bottom-sheet').classList.add('active');
-    }
-    
-    function closeTableStatusBottomSheet() {
-        document.getElementById('table-status-bottom-sheet').classList.remove('active');
-    }
-    
-    // Close bottom sheets when clicking overlay background
-    document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('bottom-sheet-overlay')) {
-            e.target.classList.remove('active');
-        }
-    });
     function openAddModal() {
         document.getElementById('add-meal-modal').style.display = 'flex';
     }
