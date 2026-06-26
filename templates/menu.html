@@ -550,6 +550,9 @@
                 <div class="step" id="step-served">
                     3 <span class="step-label lang-txt" data-key="step_served">تم التقديم</span>
                 </div>
+                <div class="step" id="step-billing">
+                    4 <span class="step-label lang-txt" data-key="step_billing">بانتظار الدفع</span>
+                </div>
             </div>
             
             <div id="tracker-status-description" style="font-weight: bold; font-size: 16px; margin-top: 25px; margin-bottom: 20px;">
@@ -657,9 +660,12 @@
             step_pending: 'قيد الانتظار',
             step_preparing: 'يتم التحضير',
             step_served: 'تم التقديم',
+            step_billing: 'بانتظار الدفع',
             status_pending: '⏳ ننتظر موافقة المطبخ وبدء التجهيز...',
             status_preparing: '🍳 يتم طهي وتجهيز وجبتك الآن!',
             status_served: '🍽️ الوجبة جاهزة وقدمت إليك! بالعافية 🥰',
+            status_billing: '💰 الرجاء تجهيز الدفع... الفاتورة في طريقها إليك!',
+            status_paid: '✅ تم الدفع! شكراً لزيارتك 🤝',
             status_cancelled: '❌ نعتذر منك، تم إلغاء الطلب من قبل المطبخ.',
             close_tracker: 'إغلاق شاشة التتبع',
             bill_title: 'تفاصيل الحساب الحالي',
@@ -707,9 +713,12 @@
             step_pending: 'Pending',
             step_preparing: 'Preparing',
             step_served: 'Served',
+            step_billing: 'Awaiting Payment',
             status_pending: '⏳ Waiting for kitchen approval and preparation...',
             status_preparing: '🍳 Your order is being cooked right now!',
             status_served: '🍽️ Your order is served! Bon appétit! 🥰',
+            status_billing: '💰 Please prepare payment... the bill is on its way!',
+            status_paid: '✅ Paid! Thank you for visiting 🤝',
             status_cancelled: '❌ Sorry, your order was cancelled by the kitchen.',
             close_tracker: 'Close Tracking Screen',
             bill_title: 'Current Invoice Details',
@@ -1015,7 +1024,7 @@
                 return;
             }
             updateTrackerUI(data.status);
-            if (data.status === 'served' || data.status === 'completed' || data.status === 'paid' || data.status === 'cancelled') {
+            if (data.status === 'paid' || data.status === 'completed' || data.status === 'cancelled') {
                 stopTracking();
             }
         } catch (e) {
@@ -1023,16 +1032,79 @@
         }
     }
     
-    function updateTrackerUI(status) {
+    function updateTrackerUI(status, skipAnimation = false) {
         const stepPending = document.getElementById('step-pending');
         const stepPreparing = document.getElementById('step-preparing');
         const stepServed = document.getElementById('step-served');
+        const stepBilling = document.getElementById('step-billing');
         const progressBar = document.getElementById('stepper-progress');
         const desc = document.getElementById('tracker-status-description');
         
+        // Helper to set step states
+        function setSteps(pendingClass, preparingClass, servedClass, billingClass, progressWidth) {
+            stepPending.className = 'step ' + pendingClass;
+            stepPreparing.className = 'step ' + preparingClass;
+            stepServed.className = 'step ' + servedClass;
+            if (stepBilling) stepBilling.className = 'step ' + billingClass;
+            progressBar.style.width = progressWidth;
+        }
+        
+        // If jumping from pending to billing/paid, auto-animate through steps
+        if (!skipAnimation && (status === 'billing' || status === 'paid' || status === 'completed')) {
+            const currentActive = document.querySelector('.step.active');
+            const currentStatus = currentActive ? currentActive.id.replace('step-', '') : 'pending';
+            
+            if (currentStatus === 'pending') {
+                // Animate: pending → preparing → served → billing
+                playBeep();
+                setSteps('completed', 'active', '', '', '33%');
+                desc.innerHTML = translations[currentLang].status_preparing;
+                
+                setTimeout(() => {
+                    playBeep();
+                    setSteps('completed', 'completed', 'active', '', '66%');
+                    desc.innerHTML = translations[currentLang].status_served;
+                    
+                    setTimeout(() => {
+                        playBeep();
+                        setSteps('completed', 'completed', 'completed', 'active', '100%');
+                        desc.innerHTML = status === 'paid' || status === 'completed' 
+                            ? translations[currentLang].status_paid 
+                            : translations[currentLang].status_billing;
+                        
+                        if (status === 'paid' || status === 'completed') {
+                            localStorage.removeItem(`tracked_order_${restaurantId}_${tableId}`);
+                        }
+                    }, 1200);
+                }, 1200);
+                return;
+            }
+            
+            if (currentStatus === 'preparing') {
+                playBeep();
+                setSteps('completed', 'completed', 'active', '', '66%');
+                desc.innerHTML = translations[currentLang].status_served;
+                
+                setTimeout(() => {
+                    playBeep();
+                    setSteps('completed', 'completed', 'completed', 'active', '100%');
+                    desc.innerHTML = status === 'paid' || status === 'completed' 
+                        ? translations[currentLang].status_paid 
+                        : translations[currentLang].status_billing;
+                    
+                    if (status === 'paid' || status === 'completed') {
+                        localStorage.removeItem(`tracked_order_${restaurantId}_${tableId}`);
+                    }
+                }, 1200);
+                return;
+            }
+        }
+        
+        // Direct status update (no animation)
         stepPending.className = 'step';
         stepPreparing.className = 'step';
         stepServed.className = 'step';
+        if (stepBilling) stepBilling.className = 'step';
         
         if (status === 'pending') {
             stepPending.classList.add('active');
@@ -1041,18 +1113,53 @@
         } else if (status === 'preparing') {
             stepPending.classList.add('completed');
             stepPreparing.classList.add('active');
-            progressBar.style.width = '50%';
+            progressBar.style.width = '33%';
             desc.innerHTML = translations[currentLang].status_preparing;
-        } else if (status === 'served' || status === 'completed' || status === 'paid') {
+        } else if (status === 'served') {
+            stepPending.classList.add('completed');
+            stepPreparing.classList.add('completed');
+            stepServed.classList.add('active');
+            progressBar.style.width = '66%';
+            desc.innerHTML = translations[currentLang].status_served;
+        } else if (status === 'billing') {
             stepPending.classList.add('completed');
             stepPreparing.classList.add('completed');
             stepServed.classList.add('completed');
+            if (stepBilling) stepBilling.classList.add('active');
             progressBar.style.width = '100%';
-            desc.innerHTML = translations[currentLang].status_served;
+            desc.innerHTML = translations[currentLang].status_billing;
+        } else if (status === 'completed' || status === 'paid') {
+            stepPending.classList.add('completed');
+            stepPreparing.classList.add('completed');
+            stepServed.classList.add('completed');
+            if (stepBilling) stepBilling.classList.add('completed');
+            progressBar.style.width = '100%';
+            desc.innerHTML = translations[currentLang].status_paid;
             localStorage.removeItem(`tracked_order_${restaurantId}_${tableId}`);
         } else if (status === 'cancelled') {
             desc.innerHTML = translations[currentLang].status_cancelled;
             localStorage.removeItem(`tracked_order_${restaurantId}_${tableId}`);
+        }
+    }
+    
+    function playBeep() {
+        try {
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+            gainNode.gain.setValueAtTime(0.15, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.3);
+            
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + 0.3);
+        } catch(e) {
+            // Silently ignore if audio not supported
         }
     }
     
