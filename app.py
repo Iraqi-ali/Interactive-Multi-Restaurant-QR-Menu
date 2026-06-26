@@ -401,14 +401,22 @@ def delete_table(table_id):
     if not session.get('restaurant_id'):
         return redirect(url_for('index'))
         
-    # Get table info to delete file
+    # Prevent deletion of the special سفري (takeaway) table
     conn = db.get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT qr_code_path FROM tables WHERE id = ?", (table_id,))
+    cursor.execute("SELECT table_number, qr_code_path FROM tables WHERE id = ? AND restaurant_id = ?", (table_id, session['restaurant_id']))
     row = cursor.fetchone()
     conn.close()
     
-    if row and row['qr_code_path']:
+    if not row:
+        flash("الطاولة غير موجودة.", "error")
+        return redirect(url_for('restaurant_dashboard'))
+    
+    if row['table_number'] == 'سفري':
+        flash("لا يمكن حذف طاولة السفري (الطلبات الخارجية). هذه الطاولة ضرورية لعمل النظام.", "error")
+        return redirect(url_for('restaurant_dashboard'))
+    
+    if row['qr_code_path']:
         try:
             os.remove(os.path.join(app.config['QRCODES_FOLDER'], row['qr_code_path']))
         except:
@@ -709,7 +717,7 @@ def api_tables_status():
         return jsonify({'error': 'Unauthorized'}), 401
     conn = db.get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, table_number, status, current_session_id FROM tables WHERE restaurant_id = ?", (session['restaurant_id'],))
+    cursor.execute("SELECT id, table_number, status, current_session_id FROM tables WHERE restaurant_id = ? AND table_number != 'سفري'", (session['restaurant_id'],))
     tables = [dict(r) for r in cursor.fetchall()]
     conn.close()
     return jsonify(tables)
@@ -805,6 +813,81 @@ def export_sales():
             "Content-Type": "text/csv; charset=utf-8"
         }
     )
+
+# --- PRINT ARCHIVED INVOICE ---
+
+@app.route('/api/restaurant/invoice/<int:invoice_id>')
+def api_get_invoice(invoice_id):
+    """Get full details of an archived invoice (for printing/review)."""
+    if not session.get('restaurant_id'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    invoice = db.get_invoice_by_id(invoice_id)
+    if not invoice:
+        return jsonify({'error': 'Invoice not found'}), 404
+    
+    # Verify the invoice belongs to this restaurant
+    if invoice['restaurant_id'] != session['restaurant_id']:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Parse items JSON
+    import json
+    try:
+        items = json.loads(invoice['items_json'])
+    except Exception:
+        items = []
+    
+    # Get restaurant info for the header
+    conn = db.get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT name, logo, currency FROM restaurants WHERE id = ?", (invoice['restaurant_id'],))
+    rest = cursor.fetchone()
+    conn.close()
+    
+    return jsonify({
+        'id': invoice['id'],
+        'table_number': invoice['table_number'],
+        'created_at': invoice['created_at'],
+        'subtotal': invoice['subtotal'],
+        'vat_rate': invoice['vat_rate'],
+        'vat_amount': invoice['vat_amount'],
+        'total_amount': invoice['total_amount'],
+        'currency': invoice['currency'],
+        'items': items,
+        'restaurant_name': rest['name'] if rest else '',
+        'restaurant_logo': rest['logo'] if rest else None
+    })
+
+@app.route('/dashboard/invoice/<int:invoice_id>/print')
+def print_invoice(invoice_id):
+    """Render a printable invoice page."""
+    if not session.get('restaurant_id'):
+        flash("يرجى تسجيل الدخول أولاً.", "error")
+        return redirect(url_for('index'))
+    
+    invoice = db.get_invoice_by_id(invoice_id)
+    if not invoice or invoice['restaurant_id'] != session['restaurant_id']:
+        flash("الفاتورة غير موجودة أو غير مصرح بها.", "error")
+        return redirect(url_for('restaurant_dashboard'))
+    
+    # Parse items JSON
+    import json
+    try:
+        items = json.loads(invoice['items_json'])
+    except Exception:
+        items = []
+    
+    # Get restaurant info
+    conn = db.get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT name, logo, currency FROM restaurants WHERE id = ?", (invoice['restaurant_id'],))
+    rest = cursor.fetchone()
+    conn.close()
+    
+    return render_template('print_invoice.html', 
+                           invoice=invoice, 
+                           items=items, 
+                           restaurant=rest)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

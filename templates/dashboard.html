@@ -895,11 +895,12 @@
                                     <th style="padding: 10px 5px;">الضريبة المستقطعة</th>
                                     <th style="padding: 10px 5px;">الإجمالي الكلي</th>
                                     <th style="padding: 10px 5px;">تفاصيل الوجبات والكميات</th>
+                                    <th style="padding: 10px 5px;">طباعة</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
-                                    <td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 20px;">جاري تحميل سجل الفواتير...</td>
+                                    <td colspan="8" style="text-align: center; color: var(--text-secondary); padding: 20px;">جاري تحميل سجل الفواتير...</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -1759,7 +1760,7 @@
             if (invoicesTbody) {
                 invoicesTbody.innerHTML = '';
                 if (!data.archived_invoices || data.archived_invoices.length === 0) {
-                    invoicesTbody.innerHTML = '<tr><td colspan="7" style="text-align: center; color: var(--text-secondary); padding: 20px;">لا توجد فواتير مؤرشفة بعد.</td></tr>';
+                    invoicesTbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-secondary); padding: 20px;">لا توجد فواتير مؤرشفة بعد.</td></tr>';
                 } else {
                     data.archived_invoices.forEach(inv => {
                         let itemsList = [];
@@ -1782,6 +1783,11 @@
                                 <td style="padding: 10px 5px; color: var(--text-secondary);">${inv.vat_amount.toFixed(2)} ${inv.currency === 'USD' ? '$' : 'د.ع'} (${inv.vat_rate}%)</td>
                                 <td style="padding: 10px 5px; font-weight: 700; color: var(--success-color);">${inv.total_amount.toFixed(2)} ${inv.currency === 'USD' ? '$' : 'د.ع'}</td>
                                 <td style="padding: 10px 5px; color: var(--text-secondary); max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${itemsStr}">${itemsStr}</td>
+                                <td style="padding: 10px 5px; text-align: center;">
+                                    <a href="/dashboard/invoice/${inv.id}/print" target="_blank" class="btn btn-sm" style="background: rgba(0, 120, 212, 0.15); color: var(--win11-accent); border: 1px solid rgba(0, 120, 212, 0.25); padding: 4px 12px; border-radius: 6px; font-size: 11px; text-decoration: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 4px;">
+                                        <i class="fa-solid fa-print" style="font-size: 10px;"></i> طباعة
+                                    </a>
+                                </td>
                             </tr>
                         `;
                     });

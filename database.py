@@ -206,6 +206,17 @@ def init_db():
     except sqlite3.OperationalError:
         pass
     
+    # Ensure all existing restaurants have a سفري (takeaway) table
+    import uuid as _uuid_mig
+    cursor.execute("SELECT id FROM restaurants")
+    all_restaurants = cursor.fetchall()
+    for rest in all_restaurants:
+        cursor.execute("SELECT id FROM tables WHERE restaurant_id = ? AND table_number = 'سفري'", (rest['id'],))
+        if not cursor.fetchone():
+            takeaway_token = f"takeaway_{_uuid_mig.uuid4().hex[:8]}"
+            cursor.execute("INSERT INTO tables (restaurant_id, table_number, token, qr_code_path, capacity, location) VALUES (?, 'سفري', ?, NULL, 0, 'سفري')",
+                           (rest['id'], takeaway_token))
+    
     # Create Default Super User if not exists
     cursor.execute("SELECT * FROM users WHERE username = 'admin'")
     if not cursor.fetchone():
@@ -292,9 +303,18 @@ def create_restaurant(user_id, name, slug, logo=None):
     try:
         cursor.execute("INSERT INTO restaurants (user_id, name, slug, logo) VALUES (?, ?, ?, ?)",
                        (user_id, name, slug, logo))
+        restaurant_id = cursor.lastrowid
+        
+        # Auto-create a "سفري" (takeaway) table for this restaurant
+        import uuid as _uuid
+        takeaway_token = f"takeaway_{_uuid.uuid4().hex[:8]}"
+        cursor.execute("INSERT INTO tables (restaurant_id, table_number, token, qr_code_path, capacity, location) VALUES (?, 'سفري', ?, NULL, 0, 'سفري')",
+                       (restaurant_id, takeaway_token))
+        
         conn.commit()
-        return cursor.lastrowid
+        return restaurant_id
     except sqlite3.IntegrityError:
+        conn.rollback()
         return None
     finally:
         conn.close()
@@ -431,7 +451,7 @@ def add_table(restaurant_id, table_number, token, qr_code_path=None, capacity=4,
 def get_tables(restaurant_id):
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM tables WHERE restaurant_id = ? ORDER BY CAST(table_number AS INTEGER), table_number", (restaurant_id,))
+    cursor.execute("SELECT * FROM tables WHERE restaurant_id = ? AND table_number != 'سفري' ORDER BY CAST(table_number AS INTEGER), table_number", (restaurant_id,))
     res = cursor.fetchall()
     conn.close()
     return res
@@ -756,6 +776,15 @@ def get_sales_analytics(restaurant_id):
         'sales_trend': sales_trend,
         'archived_invoices': archived_invoices
     }
+
+def get_invoice_by_id(invoice_id):
+    """Retrieve a single archived invoice by its ID."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM invoices WHERE id = ?", (invoice_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
 
 def update_restaurant_settings(restaurant_id, name, theme_name, primary_color, bg_color, surface_color, text_color, currency, vat_enabled=1, vat_percentage=15.0, logo=None):
     conn = get_db()

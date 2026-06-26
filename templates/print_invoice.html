@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>فاتورة #{{ invoice.id }} - {{ restaurant.name }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        @page {
+            size: A4;
+            margin: 10mm;
+        }
+        
+        body {
+            font-family: 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
+            direction: rtl;
+            color: #1e293b;
+            background: #fff;
+            padding: 0;
+            line-height: 1.6;
+        }
+        
+        @media print {
+            body { 
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .no-print { display: none !important; }
+            .invoice-container {
+                box-shadow: none !important;
+                border: 1px solid #e2e8f0 !important;
+            }
+        }
+        
+        .invoice-wrapper {
+            max-width: 210mm;
+            margin: 20px auto;
+            padding: 0 10px;
+        }
+        
+        .invoice-container {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .invoice-header {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: #fff;
+            padding: 30px 35px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .invoice-header-left h1 {
+            font-size: 26px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        
+        .invoice-header-left .restaurant-name {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+        
+        .invoice-header-right {
+            text-align: left;
+        }
+        
+        .invoice-header-right .invoice-number {
+            font-size: 20px;
+            font-weight: 700;
+            background: rgba(255,255,255,0.15);
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+        }
+        
+        .invoice-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            padding: 25px 35px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .meta-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .meta-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .meta-value {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .invoice-body {
+            padding: 25px 35px;
+        }
+        
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .items-table thead th {
+            background: #f1f5f9;
+            padding: 12px 16px;
+            text-align: right;
+            font-size: 12px;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+        
+        .items-table thead th:last-child {
+            text-align: left;
+        }
+        
+        .items-table tbody td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f1f5f9;
+            font-size: 14px;
+            color: #334155;
+        }
+        
+        .items-table tbody td:last-child {
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        .items-table tbody tr:hover {
+            background: #f8fafc;
+        }
+        
+        .item-name {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .item-qty {
+            display: inline-block;
+            background: #e2e8f0;
+            color: #475569;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        
+        .invoice-totals {
+            margin-top: 25px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 10px;
+            padding: 20px 0;
+            border-top: 2px solid #e2e8f0;
+        }
+        
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            width: 280px;
+            font-size: 14px;
+            color: #475569;
+        }
+        
+        .total-row.subtotal {
+            font-size: 14px;
+        }
+        
+        .total-row.vat {
+            font-size: 14px;
+            color: #64748b;
+        }
+        
+        .total-row.grand-total {
+            font-size: 20px;
+            font-weight: 800;
+            color: #059669;
+            border-top: 2px dashed #e2e8f0;
+            padding-top: 12px;
+            margin-top: 4px;
+        }
+        
+        .total-row.grand-total .total-label {
+            color: #059669;
+        }
+        
+        .total-label {
+            font-weight: 600;
+        }
+        
+        .total-amount {
+            font-weight: 700;
+        }
+        
+        .invoice-footer {
+            padding: 20px 35px;
+            background: #f8fafc;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            font-size: 12px;
+            color: #94a3b8;
+        }
+        
+        .print-btn-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        .btn {
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-print {
+            background: #059669;
+            color: #fff;
+        }
+        
+        .btn-print:hover {
+            background: #047857;
+        }
+        
+        .btn-back {
+            background: #e2e8f0;
+            color: #475569;
+        }
+        
+        .btn-back:hover {
+            background: #cbd5e1;
+        }
+        
+        .empty-row td {
+            text-align: center;
+            padding: 30px;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-wrapper">
+        <div class="print-btn-container no-print">
+            <button class="btn btn-print" onclick="window.print()">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                طباعة الفاتورة
+            </button>
+            <a href="/dashboard" class="btn btn-back">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                العودة للوحة التحكم
+            </a>
+        </div>
+        
+        <div class="invoice-container">
+            <div class="invoice-header">
+                <div class="invoice-header-left">
+                    <h1>فاتورة رسمية</h1>
+                    <div class="restaurant-name">{{ restaurant.name }}</div>
+                </div>
+                <div class="invoice-header-right">
+                    <div class="invoice-number">#{{ invoice.id }}</div>
+                </div>
+            </div>
+            
+            <div class="invoice-meta">
+                <div class="meta-item">
+                    <span class="meta-label">رقم الطاولة</span>
+                    <span class="meta-value">طاولة {{ invoice.table_number }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">تاريخ وتوقيت الفاتورة</span>
+                    <span class="meta-value" id="invoice-date">{{ invoice.created_at }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">العملة</span>
+                    <span class="meta-value">{{ 'دولار $' if invoice.currency == 'USD' else 'دينار عراقي د.ع' }}</span>
+                </div>
+                <div class="meta-item">
+                    <span class="meta-label">رقم الجلسة</span>
+                    <span class="meta-value" style="font-size: 11px; font-family: monospace;">{{ invoice.session_id }}</span>
+                </div>
+            </div>
+            
+            <div class="invoice-body">
+                <table class="items-table">
+                    <thead>
+                        <tr>
+                            <th>الوجبة</th>
+                            <th>الكمية</th>
+                            <th>سعر الوحدة</th>
+                            <th>المجموع</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if items %}
+                            {% for item in items %}
+                            <tr>
+                                <td class="item-name">{{ item.name }}</td>
+                                <td><span class="item-qty">x{{ item.quantity }}</span></td>
+                                <td>{{ "%.2f"|format(item.price) }} {{ '$' if invoice.currency == 'USD' else 'د.ع' }}</td>
+                                <td>{{ "%.2f"|format(item.total) }} {{ '$' if invoice.currency == 'USD' else 'د.ع' }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="empty-row">لا توجد عناصر في هذه الفاتورة.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+                
+                <div class="invoice-totals">
+                    <div class="total-row subtotal">
+                        <span class="total-label">المجموع الفرعي</span>
+                        <span class="total-amount">{{ "%.2f"|format(invoice.subtotal) }} {{ '$' if invoice.currency == 'USD' else 'د.ع' }}</span>
+                    </div>
+                    {% if invoice.vat_amount > 0 %}
+                    <div class="total-row vat">
+                        <span class="total-label">ضريبة القيمة المضافة ({{ "%.1f"|format(invoice.vat_rate) }}%)</span>
+                        <span class="total-amount">{{ "%.2f"|format(invoice.vat_amount) }} {{ '$' if invoice.currency == 'USD' else 'د.ع' }}</span>
+                    </div>
+                    {% endif %}
+                    <div class="total-row grand-total">
+                        <span class="total-label">الإجمالي الكلي</span>
+                        <span class="total-amount">{{ "%.2f"|format(invoice.total_amount) }} {{ '$' if invoice.currency == 'USD' else 'د.ع' }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="invoice-footer">
+                <p>شكراً لزيارتكم {{ restaurant.name }} - نتشرف بخدمتكم دائماً</p>
+                <p style="margin-top: 4px;">تم إنشاء هذه الفاتورة بواسطة نظام Anti-Gravity لإدارة المطاعم</p>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dateEl = document.getElementById('invoice-date');
+            if (dateEl) {
+                const rawDate = dateEl.textContent.trim();
+                try {
+                    const d = new Date(rawDate + 'Z');
+                    if (!isNaN(d.getTime())) {
+                        dateEl.textContent = d.toLocaleString('ar-SA', {
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                        });
+                    }
+                } catch(e) {}
+            }
+        });
+    </script>
+</body>
+</html>
