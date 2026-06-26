@@ -1204,6 +1204,24 @@
 <!-- Windows 11 Sliding System Notification Center / Tray -->
 <div class="win11-notification-tray" id="win11-tray"></div>
 
+<!-- PASSWORD PROMPT MODAL -->
+<div id="password-modal" class="modal">
+    <div class="modal-content win11-window" style="max-width: 380px; padding: 0;">
+        <div class="win11-window-header">
+            <div class="win11-window-title"><i class="fa-solid fa-lock"></i> تأكيد الرمز السري</div>
+            <button class="modal-close" onclick="cancelPassword()" style="position: static; font-size: 20px; color: var(--text-secondary); background: none; border: none; cursor: pointer;">&times;</button>
+        </div>
+        <div class="win11-window-body" style="padding: 20px; text-align: center;">
+            <p id="password-prompt-message" style="margin-bottom: 15px; color: var(--text-secondary);">أدخل الرمز السري للمطعم:</p>
+            <input type="password" id="password-input" class="form-control" placeholder="كلمة سر المطعم" style="width: 100%; padding: 10px; border-radius: 6px; background: rgba(0,0,0,0.3); color: #fff; border: 1px solid var(--win11-border); text-align: center; font-size: 16px;" autocomplete="off">
+            <div style="display: flex; gap: 10px; margin-top: 15px;">
+                <button class="btn btn-danger" style="flex: 1; border-radius: 6px;" onclick="submitPassword()"><i class="fa-solid fa-check"></i> تأكيد</button>
+                <button class="btn btn-secondary" style="flex: 1; border-radius: 6px;" onclick="cancelPassword()">إلغاء</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}
@@ -1554,11 +1572,26 @@
             else if (o.status === 'paid') statusLabel = '💵 مدفوع';
             
             let itemsHtml = '';
-            o.items.forEach(item => {
+            o.items.forEach((item, idx) => {
+                const itemId = item.id || `oi_${o.id}_${idx}`;
                 itemsHtml += `
                     <li class="order-item-row">
                         <span>${item.item_name}</span>
-                        <span><span class="order-item-qty">x${item.quantity}</span> - ${item.price} ${currencyLabel}</span>
+                        <span style="display: flex; align-items: center; gap: 6px;">
+                            <span class="order-item-qty">x${item.quantity}</span>
+                            <span style="color: var(--text-secondary);">${item.price} ${currencyLabel}</span>
+                            ${(o.status === 'pending' || o.status === 'preparing') ? `
+                            <button class="btn btn-sm" onclick="event.stopPropagation(); adjustOrderItemQty(${itemId}, ${item.quantity - 1}, ${o.id}, '${o.status}')" style="padding: 2px 6px; font-size: 10px; border-radius: 4px; background: rgba(255,255,255,0.1); border: none; color: #ff9100; cursor: pointer;" title="تقليل الكمية">
+                                <i class="fa-solid fa-minus"></i>
+                            </button>
+                            <button class="btn btn-sm" onclick="event.stopPropagation(); adjustOrderItemQty(${itemId}, ${item.quantity + 1}, ${o.id}, '${o.status}')" style="padding: 2px 6px; font-size: 10px; border-radius: 4px; background: rgba(255,255,255,0.1); border: none; color: var(--success-color); cursor: pointer;" title="زيادة الكمية">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                            <button class="btn btn-sm" onclick="event.stopPropagation(); deleteOrderItem(${itemId}, ${o.id}, '${o.status}')" style="padding: 2px 6px; font-size: 10px; border-radius: 4px; background: rgba(255,23,68,0.15); border: none; color: var(--danger-color); cursor: pointer;" title="حذف الوجبة من الطلب">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                            ` : ''}
+                        </span>
                     </li>
                 `;
             });
@@ -1750,16 +1783,127 @@
             const res = await fetch(`/api/restaurant/table/checkout/${activeTableCheckoutId}`, {
                 method: 'POST'
             });
+            const data = await res.json();
             if (res.ok) {
                 closeModal('invoice-modal');
-                showTrayNotification('تصفية الطاولة المكتملة', 'تم تأكيد استلام النقد نقداً وإخلاء الطاولة وتصفيرها للزبون القادم بنجاح.');
-                // Refresh immediately
+                if (data.message === 'table_already_empty') {
+                    showTrayNotification('إعادة تعيين الطاولة', 'لا توجد طلبات نشطة لهذه الطاولة. تم إعادة تعيين الطاولة إلى متاحة.');
+                } else {
+                    showTrayNotification('تصفية الطاولة المكتملة', 'تم تأكيد استلام النقد نقداً وإخلاء الطاولة وتصفيرها للزبون القادم بنجاح.');
+                }
                 location.reload();
             }
         } catch (e) {
             console.error("Error checking out:", e);
         }
     }
+
+    // --- ORDER ITEM MANAGEMENT (Cashier) ---
+    
+    async function adjustOrderItemQty(itemId, newQuantity, orderId, orderStatus) {
+        if (newQuantity <= 0) {
+            // If quantity would go to 0, delete the item
+            return deleteOrderItem(itemId, orderId, orderStatus);
+        }
+        
+        // Restricted statuses require password
+        if (orderStatus === 'billing' || orderStatus === 'served' || orderStatus === 'paid') {
+            const pwd = await promptPassword('تعديل الطلب في هذه الحالة يتطلب الرمز السري للمطعم:');
+            if (!pwd) return;
+            
+            try {
+                const res = await fetch(`/api/order/item/update/${itemId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ quantity: newQuantity, password: pwd })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    alert(data.message || 'حدث خطأ.');
+                }
+            } catch(e) { console.error(e); }
+            pollDashboardData();
+            return;
+        }
+        
+        try {
+            const res = await fetch(`/api/order/item/update/${itemId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ quantity: newQuantity })
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.message || 'حدث خطأ.');
+            }
+        } catch(e) { console.error(e); }
+        pollDashboardData();
+    }
+    
+    async function deleteOrderItem(itemId, orderId, orderStatus) {
+        if (!confirm('هل أنت متأكد من حذف هذه الوجبة من الطلب؟')) return;
+        
+        // Restricted statuses require password
+        if (orderStatus === 'billing' || orderStatus === 'served' || orderStatus === 'paid') {
+            const pwd = await promptPassword('حذف الوجبة من الطلب في هذه الحالة يتطلب الرمز السري للمطعم:');
+            if (!pwd) return;
+            
+            try {
+                const res = await fetch(`/api/order/item/delete/${itemId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password: pwd })
+                });
+                const data = await res.json();
+                if (!res.ok) {
+                    alert(data.message || 'حدث خطأ.');
+                }
+            } catch(e) { console.error(e); }
+            pollDashboardData();
+            return;
+        }
+        
+        try {
+            const res = await fetch(`/api/order/item/delete/${itemId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' }
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                alert(data.message || 'حدث خطأ.');
+            }
+        } catch(e) { console.error(e); }
+        pollDashboardData();
+    }
+    
+    function promptPassword(message) {
+        return new Promise((resolve) => {
+            document.getElementById('password-prompt-message').innerText = message || 'أدخل الرمز السري للمطعم:';
+            document.getElementById('password-input').value = '';
+            document.getElementById('password-modal').style.display = 'flex';
+            
+            window._pwdResolve = resolve;
+        });
+    }
+    
+    function submitPassword() {
+        const pwd = document.getElementById('password-input').value;
+        document.getElementById('password-modal').style.display = 'none';
+        if (window._pwdResolve) {
+            window._pwdResolve(pwd || null);
+            window._pwdResolve = null;
+        }
+    }
+    
+    function cancelPassword() {
+        document.getElementById('password-modal').style.display = 'none';
+        if (window._pwdResolve) {
+            window._pwdResolve(null);
+            window._pwdResolve = null;
+        }
+    }
+
+    // --- END ORDER ITEM MANAGEMENT ---
 
     // Chart.js Graphs & Analytics Dashboard loader
     let trendChart = null;

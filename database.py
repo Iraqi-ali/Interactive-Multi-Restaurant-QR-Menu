@@ -902,3 +902,188 @@ def verify_restaurant_password(restaurant_id, password):
     if row:
         return check_password_hash(row['password'], password)
     return False
+
+def delete_order_item(order_item_id):
+    """Delete a single item from an order and update the order total. Auto-resets table if all orders empty."""
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        # Get the order_id and price/quantity before deleting
+        cursor.execute("SELECT order_id, quantity, price FROM order_items WHERE id = ?", (order_item_id,))
+        item = cursor.fetchone()
+        if not item:
+            conn.close()
+            return False
+        
+        order_id = item['order_id']
+        item_total = item['quantity'] * item['price']
+        
+        # Delete the item
+        cursor.execute("DELETE FROM order_items WHERE id = ?", (order_item_id,))
+        
+        # Update the order total
+        cursor.execute("UPDATE orders SET total_price = total_price - ? WHERE id = ?", (item_total, order_id))
+        
+        # Check if order still has items; if empty, cancel the order
+        cursor.execute("SELECT COUNT(*) as cnt FROM order_items WHERE order_id = ?", (order_id,))
+        row = cursor.fetchone()
+        if row['cnt'] == 0:
+            cursor.execute("UPDATE orders SET status = 'cancelled' WHERE id = ?", (order_id,))
+        
+        # Check if all orders for this table's session are now cancelled, if so reset table
+        cursor.execute("SELECT table_id, session_id FROM orders WHERE id = ?", (order_id,))
+        order_info = cursor.fetchone()
+        if order_info and order_info['session_id']:
+            _reset_table_if_session_empty(cursor, order_info['table_id'], order_info['session_id'])
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+def update_order_item_quantity(order_item_id, new_quantity):
+    """Update quantity of an order item and recalculate order total."""
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        # Get current item info
+        cursor.execute("SELECT order_id, quantity, price FROM order_items WHERE id = ?", (order_item_id,))
+        item = cursor.fetchone()
+        if not item:
+            conn.close()
+            return False
+        
+        order_id = item['order_id']
+        old_total = item['quantity'] * item['price']
+        new_total = new_quantity * item['price']
+        delta = new_total - old_total
+        
+        # Update quantity
+        cursor.execute("UPDATE order_items SET quantity = ? WHERE id = ?", (new_quantity, order_item_id))
+        
+        # Update order total
+        cursor.execute("UPDATE orders SET total_price = total_price + ? WHERE id = ?", (delta, order_id))
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+def get_full_table_invoice(table_id):
+    """Get complete invoice details for a table's current session with VAT breakdown."""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Get table info
+    cursor.execute("SELECT * FROM tables WHERE id = ?", (table_id,))
+    table = cursor.fetchone()
+    if not table:
+        conn.close()
+        return None
+    
+    # Get restaurant VAT settings
+    cursor.execute("SELECT vat_enabled, vat_percentage, currency, name FROM restaurants WHERE id = ?", (table['restaurant_id'],))
+    rest = cursor.fetchone()
+    
+    vat_enabled = rest['vat_enabled'] if rest else 1
+    vat_percentage = rest['vat_percentage'] if rest else 15.0
+    currency = rest['currency'] if rest else 'IQD'
+    restaurant_name = rest['name'] if rest else ''
+    
+    # Get all orders for this table's session (excluding cancelled)
+    session_id = table['current_session_id']
+    if not session_id:
+        conn.close()
+        return {'items': [], 'subtotal': 0, 'vat': 0, 'vat_percentage': vat_percentage if vat_enabled else 0, 'grand_total': 0, 'currency': currency, 'restaurant_name': restaurant_name, 'table_number': table['table_number']}
+    
+    cursor.execute("""
+        SELECT m.name as item_name, SUM(oi.quantity) as quantity, oi.price, SUM(oi.quantity * oi.price) as item_total
+        FROM orders o
+        JOIN order_items oi ON oi.order_id = o.id
+        JOIN menu_items m ON oi.menu_item_id = m.id
+        WHERE o.table_id = ? 
+          AND o.session_id = ?
+          AND o.status != 'cancelled'
+        GROUP BY oi.menu_item_id, oi.price
+    """, (table_id, session_id))
+    items_rows = cursor.fetchall()
+    
+    items = []
+    subtotal = 0
+    for row in items_rows:
+        items.append({
+            'name': row['item_name'],
+            'quantity': row['quantity'],
+            'price': row['price'],
+            'total': row['item_total']
+        })
+        subtotal += row['item_total']
+    
+    vat = subtotal * (vat_percentage / 100.0) if vat_enabled == 1 else 0.0
+    grand_total = subtotal + vat
+    
+    conn.close()
+    return {
+        'items': items,
+        'subtotal': subtotal,
+        'vat': vat,
+        'vat_percentage': vat_percentage if vat_enabled == 1 else 0.0,
+        'grand_total': grand_total,
+        'currency': currency,
+        'restaurant_name': restaurant_name,
+        'table_number': table['table_number']
+    }
+
+def cancel_order(order_id):
+    """Cancel an entire order and auto-reset table if no active orders remain."""
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        # Get table_id and session_id before cancelling
+        cursor.execute("SELECT table_id, session_id FROM orders WHERE id = ?", (order_id,))
+        order_info = cursor.fetchone()
+        
+        cursor.execute("UPDATE orders SET status = 'cancelled' WHERE id = ?", (order_id,))
+        
+        # If this was a session-based order, check if all orders are cancelled and reset table
+        if order_info and order_info['session_id']:
+            _reset_table_if_session_empty(cursor, order_info['table_id'], order_info['session_id'])
+        
+        conn.commit()
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+def _reset_table_if_session_empty(cursor, table_id, session_id):
+    """Helper: if no non-cancelled orders exist for this session, reset table to available."""
+    cursor.execute("""
+        SELECT COUNT(*) as cnt FROM orders 
+        WHERE table_id = ? AND session_id = ? AND status != 'cancelled'
+    """, (table_id, session_id))
+    row = cursor.fetchone()
+    if row and row['cnt'] == 0:
+        cursor.execute("UPDATE tables SET status = 'available', current_session_id = NULL WHERE id = ?", (table_id,))
+        # Also resolve any active waiter calls for this table
+        cursor.execute("UPDATE waiter_calls SET status = 'resolved' WHERE table_id = ? AND status = 'active'", (table_id,))
+
+def get_order_by_id(order_id):
+    """Get a single order by its ID."""
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT o.*, t.table_number 
+        FROM orders o 
+        JOIN tables t ON o.table_id = t.id 
+        WHERE o.id = ?
+    """, (order_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None

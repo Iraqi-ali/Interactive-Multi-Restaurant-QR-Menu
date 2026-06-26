@@ -458,6 +458,9 @@
         <button class="btn btn-secondary" onclick="sendWaiterCall('waiter')">
             <i class="fa-solid fa-bell"></i> <span class="lang-txt" data-key="callwaiter">استدعاء النادل</span>
         </button>
+        <button class="btn btn-secondary" onclick="viewFullInvoice()">
+            <i class="fa-solid fa-file-invoice"></i> <span class="lang-txt" data-key="viewinvoice">رؤية الفاتورة الكلية</span>
+        </button>
         <button class="btn btn-secondary" onclick="requestBillDetails()">
             <i class="fa-solid fa-receipt"></i> <span class="lang-txt" data-key="requestbill">طلب الفاتورة وتفاصيل الحساب</span>
         </button>
@@ -594,6 +597,9 @@
             </div>
         </div>
         <button class="btn btn-secondary" style="width: 100%;" onclick="closeTrackerModal()"><i class="fa-solid fa-circle-xmark"></i> <span class="lang-txt" data-key="close_tracker">إغلاق شاشة التتبع</span></button>
+        <button class="btn btn-danger" id="btn-cancel-order" style="width: 100%; margin-top: 8px; display: none;" onclick="cancelMyOrder()">
+            <i class="fa-solid fa-ban"></i> <span class="lang-txt" data-key="cancel_order_btn">إلغاء الطلب</span>
+        </button>
     </div>
 </div>
 
@@ -640,6 +646,60 @@
         </div>
         
         <button class="btn btn-secondary" style="width: 100%;" onclick="closeModal('customer-bill-modal')"><span class="lang-txt" data-key="close_bill">إغلاق الفاتورة</span></button>
+    </div>
+</div>
+
+<!-- FULL INVOICE VIEW MODAL (Customer) -->
+<div id="full-invoice-modal" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+        <button class="modal-close" onclick="closeModal('full-invoice-modal')">&times;</button>
+        <h3 class="modal-title" style="border-bottom: 1px dashed var(--glass-border); padding-bottom: 10px;">
+            <i class="fa-solid fa-file-invoice-dollar"></i> <span class="lang-txt" data-key="full_invoice_title">الفاتورة الكلية</span>
+        </h3>
+        
+        <div class="modal-body" style="font-size: 13px;">
+            <div style="text-align: center; margin-bottom: 12px; font-weight: bold; font-size: 15px;">
+                <span id="full-invoice-rest-name"></span>
+            </div>
+            <div style="text-align: center; margin-bottom: 15px; color: var(--text-secondary); font-size: 11px;">
+                <span class="lang-txt" data-key="table_label">طاولة رقم</span> <span id="full-invoice-table-num"></span>
+            </div>
+            
+            <div style="max-height: 200px; overflow-y: auto; margin-bottom: 15px;">
+                <table style="width: 100%; border-collapse: collapse; text-align: right;">
+                    <thead>
+                        <tr style="border-bottom: 1px solid var(--glass-border); color: var(--text-secondary); font-size: 12px;">
+                            <th style="padding: 6px 0;" class="lang-txt" data-key="item">الوجبة</th>
+                            <th style="padding: 6px 0; text-align: center;" class="lang-txt" data-key="qty">الكمية</th>
+                            <th style="padding: 6px 0; text-align: left;" class="lang-txt" data-key="price">السعر</th>
+                        </tr>
+                    </thead>
+                    <tbody id="full-invoice-items-body"></tbody>
+                </table>
+                <div id="full-invoice-empty" style="text-align: center; padding: 20px; color: var(--text-secondary); display: none;">
+                    <span class="lang-txt" data-key="bill_empty">لا توجد طلبات جارية لتصفيها حالياً.</span>
+                </div>
+            </div>
+            
+            <div style="background: rgba(0, 0, 0, 0.2); padding: 12px; border-radius: 8px; display: flex; flex-direction: column; gap: 6px;">
+                <div style="display: flex; justify-content: space-between;">
+                    <span class="lang-txt" data-key="bill_subtotal">المجموع الفرعي</span>
+                    <span id="full-invoice-subtotal">0.00</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; color: var(--text-secondary);">
+                    <span id="full-invoice-vat-label" class="lang-txt" data-key="bill_vat">ضريبة القيمة المضافة</span>
+                    <span id="full-invoice-vat">0.00</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-weight: bold; font-size: 16px; border-top: 1px solid var(--glass-border); padding-top: 8px; color: var(--success-color);">
+                    <span class="lang-txt" data-key="bill_total">المجموع الإجمالي</span>
+                    <span id="full-invoice-total">0.00</span>
+                </div>
+            </div>
+        </div>
+        
+        <button class="btn btn-secondary" style="width: 100%; margin-top: 10px;" onclick="closeModal('full-invoice-modal')">
+            <span class="lang-txt" data-key="close_bill">إغلاق الفاتورة</span>
+        </button>
     </div>
 </div>
 
@@ -719,7 +779,14 @@
             no_desc: 'لا يوجد وصف.',
             currency: 'ر.س',
             menu_empty: 'لا توجد وجبات مضافة في المنيو حالياً.',
-            unavailable: 'غير متوفر'
+            unavailable: 'غير متوفر',
+            viewinvoice: 'رؤية الفاتورة الكلية',
+            full_invoice_title: 'الفاتورة الكلية',
+            table_label: 'طاولة رقم',
+            cancel_order_btn: 'إلغاء الطلب',
+            cancel_order_confirm: 'هل أنت متأكد من إلغاء الطلب؟ لا يمكن التراجع بعد الإلغاء.',
+            cancel_order_success: 'تم إلغاء الطلب بنجاح.',
+            cancel_order_fail: 'لا يمكن إلغاء الطلب بعد بدء تحضيره. يرجى التواصل مع النادل.'
         },
         en: {
             lang_btn: 'العربية',
@@ -772,7 +839,14 @@
             no_desc: 'No description available.',
             currency: 'SAR',
             menu_empty: 'No menu items available currently.',
-            unavailable: 'Unavailable'
+            unavailable: 'Unavailable',
+            viewinvoice: 'View Full Invoice',
+            full_invoice_title: 'Full Invoice',
+            table_label: 'Table No.',
+            cancel_order_btn: 'Cancel Order',
+            cancel_order_confirm: 'Are you sure you want to cancel this order? This cannot be undone.',
+            cancel_order_success: 'Order cancelled successfully.',
+            cancel_order_fail: 'Order cannot be cancelled after preparation has started. Please contact the waiter.'
         }
     };
 
@@ -1078,6 +1152,12 @@
         const stepBilling = document.getElementById('step-billing');
         const progressBar = document.getElementById('stepper-progress');
         const desc = document.getElementById('tracker-status-description');
+        const cancelBtn = document.getElementById('btn-cancel-order');
+        
+        // Show cancel button only when status is 'pending'
+        if (cancelBtn) {
+            cancelBtn.style.display = (status === 'pending') ? 'block' : 'none';
+        }
         
         // Helper to set step states
         function setSteps(pendingClass, preparingClass, servedClass, billingClass, progressWidth) {
@@ -1295,6 +1375,86 @@
         setTimeout(() => {
             toast.classList.remove('show');
         }, 3000);
+    }
+    
+    // --- CANCEL MY ORDER (Customer) ---
+    async function cancelMyOrder() {
+        const trackedOrderId = localStorage.getItem(`tracked_order_${restaurantId}_${tableId}`);
+        if (!trackedOrderId) return;
+        
+        const msg = translations[currentLang].cancel_order_confirm;
+        if (!confirm(msg)) return;
+        
+        try {
+            const res = await fetch(`/api/order/cancel/${trackedOrderId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: tableToken,
+                    table_id: tableId
+                })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showToast(translations[currentLang].cancel_order_success);
+                localStorage.removeItem(`tracked_order_${restaurantId}_${tableId}`);
+                closeTrackerModal();
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                alert(data.message || translations[currentLang].cancel_order_fail);
+            }
+        } catch (e) {
+            console.error('Cancel order error:', e);
+        }
+    }
+    
+    // --- VIEW FULL INVOICE (Customer) ---
+    async function viewFullInvoice() {
+        try {
+            const res = await fetch(`/api/table/full-invoice/${tableId}?token=${tableToken}`);
+            const data = await res.json();
+            
+            const currencyLabel = getCurrencyLabel(currentLang);
+            
+            document.getElementById('full-invoice-rest-name').innerText = data.restaurant_name || '';
+            document.getElementById('full-invoice-table-num').innerText = data.table_number || '';
+            
+            const tbody = document.getElementById('full-invoice-items-body');
+            const emptyDiv = document.getElementById('full-invoice-empty');
+            tbody.innerHTML = '';
+            
+            if (!data.items || data.items.length === 0) {
+                tbody.innerHTML = '';
+                emptyDiv.style.display = 'block';
+            } else {
+                emptyDiv.style.display = 'none';
+                data.items.forEach(item => {
+                    tbody.innerHTML += `
+                        <tr style="border-bottom: 1px solid var(--glass-border);">
+                            <td style="padding: 6px 0;">${item.name}</td>
+                            <td style="padding: 6px 0; text-align: center; font-weight: bold; color: var(--accent-color);">x${item.quantity}</td>
+                            <td style="padding: 6px 0; text-align: left;">${item.total.toFixed(2)} ${currencyLabel}</td>
+                        </tr>
+                    `;
+                });
+            }
+            
+            document.getElementById('full-invoice-subtotal').innerText = `${data.subtotal.toFixed(2)} ${currencyLabel}`;
+            
+            const vatLabel = document.getElementById('full-invoice-vat-label');
+            if (vatLabel) {
+                vatLabel.innerText = currentLang === 'ar' 
+                    ? `ضريبة القيمة المضافة (${data.vat_percentage}%)` 
+                    : `VAT (${data.vat_percentage}%)`;
+            }
+            
+            document.getElementById('full-invoice-vat').innerText = `${data.vat.toFixed(2)} ${currencyLabel}`;
+            document.getElementById('full-invoice-total').innerText = `${data.grand_total.toFixed(2)} ${currencyLabel}`;
+            
+            document.getElementById('full-invoice-modal').style.display = 'flex';
+        } catch (e) {
+            console.error('Error fetching full invoice:', e);
+        }
     }
 </script>
 {% endblock %}

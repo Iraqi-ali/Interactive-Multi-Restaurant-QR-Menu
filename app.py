@@ -517,6 +517,7 @@ def api_get_orders():
         items_list = []
         for item in details['items']:
             items_list.append({
+                'id': item['id'],
                 'item_name': item['item_name'],
                 'quantity': item['quantity'],
                 'price': item['price']
@@ -655,19 +656,174 @@ def api_update_order_status(order_id):
         
         if order:
             current_status = order['status']
-            # If current status is preparing, served, or billing, check password
-            if current_status in ['preparing', 'served', 'billing']:
+            # Restricted statuses: billing (بانتظار الدفع), served (تم التقديم), paid (مدفوع)
+            if current_status in ['preparing', 'served', 'billing', 'paid']:
                 if not password:
-                    return jsonify({'error': 'password_required', 'message': 'إلغاء الطلب بعد التحضير أو طلب الفاتورة غير مسموح إلا بإدخال الرمز السري للمطعم.'}), 400
+                    return jsonify({'error': 'password_required', 'message': 'إلغاء الطلب بعد التحضير أو طلب الفاتورة أو الدفع غير مسموح إلا بإدخال الرمز السري للمطعم.'}), 400
                 
                 # Verify password
                 if not db.verify_restaurant_password(order['restaurant_id'], password):
-                    return jsonify({'error': 'invalid_password', 'message': 'رمز السري للمطعم غير صحيح. لا يمكن إلغاء الطلب.'}), 403
+                    return jsonify({'error': 'invalid_password', 'message': 'الرمز السري للمطعم غير صحيح. لا يمكن إلغاء الطلب.'}), 403
                     
     if status in ['pending', 'preparing', 'served', 'billing', 'paid', 'cancelled', 'completed']:
         db.update_order_status(order_id, status)
+        # If cancelled, the cancel_order function in db already resets table if needed.
+        # But since we're using update_order_status directly here (not cancel_order),
+        # we need to also handle the table reset for 'cancelled' status
+        if status == 'cancelled':
+            # Use cancel_order which handles the table reset logic
+            db.cancel_order(order_id)
+            return jsonify({'success': True})
         return jsonify({'success': True})
     return jsonify({'error': 'Invalid status'}), 400
+
+# --- CUSTOMER CANCEL ORDER (no login, token-based) ---
+@app.route('/api/order/cancel/<int:order_id>', methods=['POST'])
+def api_customer_cancel_order(order_id):
+    """Customer can cancel their own order if status is 'pending' only."""
+    data = request.json
+    token = data.get('token')
+    table_id = data.get('table_id')
+    
+    # Verify the order belongs to this table/token
+    conn = db.get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT o.*, t.token as table_token 
+        FROM orders o 
+        JOIN tables t ON o.table_id = t.id 
+        WHERE o.id = ?
+    """, (order_id,))
+    order = cursor.fetchone()
+    conn.close()
+    
+    if not order:
+        return jsonify({'error': 'Order not found'}), 404
+    
+    # Verify token matches the table
+    if order['table_token'] != token or str(order['table_id']) != str(table_id):
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    # Only allow cancellation when order is 'pending'
+    if order['status'] != 'pending':
+        return jsonify({'error': 'cannot_cancel', 'message': 'لا يمكن إلغاء الطلب بعد بدء تحضيره. يرجى التواصل مع النادل.'}), 400
+    
+    db.cancel_order(order_id)
+    return jsonify({'success': True, 'message': 'تم إلغاء الطلب بنجاح.'})
+
+# --- CASHIER MODIFY ORDER ITEMS ---
+@app.route('/api/order/item/delete/<int:order_item_id>', methods=['POST'])
+def api_delete_order_item(order_item_id):
+    """Cashier can delete a specific item from an order before preparation."""
+    if not session.get('restaurant_id'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json or {}
+    password = data.get('password')
+    
+    # Get the order this item belongs to
+    conn = db.get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT oi.*, o.status as order_status, o.restaurant_id, o.table_id
+        FROM order_items oi
+        JOIN orders o ON oi.order_id = o.id
+        WHERE oi.id = ?
+    """, (order_item_id,))
+    item_info = cursor.fetchone()
+    conn.close()
+    
+    if not item_info:
+        return jsonify({'error': 'Item not found'}), 404
+    
+    if item_info['restaurant_id'] != session.get('restaurant_id'):
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    current_status = item_info['order_status']
+    
+    # Restricted statuses require password
+    if current_status in ['billing', 'served', 'paid']:
+        if not password:
+            return jsonify({'error': 'password_required', 'message': 'تعديل الطلب في هذه الحالة (بانتظار الدفع / تم التقديم / مدفوع) يتطلب الرمز السري للمطعم.'}), 400
+        if not db.verify_restaurant_password(item_info['restaurant_id'], password):
+            return jsonify({'error': 'invalid_password', 'message': 'الرمز السري للمطعم غير صحيح.'}), 403
+    
+    try:
+        db.delete_order_item(order_item_id)
+        return jsonify({'success': True, 'message': 'تم حذف الوجبة من الطلب بنجاح.'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/order/item/update/<int:order_item_id>', methods=['POST'])
+def api_update_order_item_quantity(order_item_id):
+    """Cashier can update quantity of a specific item in an order."""
+    if not session.get('restaurant_id'):
+        return jsonify({'error': 'Unauthorized'}), 401
+    
+    data = request.json or {}
+    new_quantity = data.get('quantity')
+    password = data.get('password')
+    
+    if new_quantity is None or new_quantity < 0:
+        return jsonify({'error': 'Invalid quantity'}), 400
+    
+    # Get the order this item belongs to
+    conn = db.get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT oi.*, o.status as order_status, o.restaurant_id, o.table_id
+        FROM order_items oi
+        JOIN orders o ON oi.order_id = o.id
+        WHERE oi.id = ?
+    """, (order_item_id,))
+    item_info = cursor.fetchone()
+    conn.close()
+    
+    if not item_info:
+        return jsonify({'error': 'Item not found'}), 404
+    
+    if item_info['restaurant_id'] != session.get('restaurant_id'):
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    current_status = item_info['order_status']
+    
+    # Restricted statuses require password
+    if current_status in ['billing', 'served', 'paid']:
+        if not password:
+            return jsonify({'error': 'password_required', 'message': 'تعديل الطلب في هذه الحالة (بانتظار الدفع / تم التقديم / مدفوع) يتطلب الرمز السري للمطعم.'}), 400
+        if not db.verify_restaurant_password(item_info['restaurant_id'], password):
+            return jsonify({'error': 'invalid_password', 'message': 'الرمز السري للمطعم غير صحيح.'}), 403
+    
+    try:
+        if new_quantity == 0:
+            # Delete the item entirely
+            db.delete_order_item(order_item_id)
+            return jsonify({'success': True, 'message': 'تم حذف الوجبة من الطلب (الكمية أصبحت صفر).'})
+        else:
+            db.update_order_item_quantity(order_item_id, new_quantity)
+            return jsonify({'success': True, 'message': 'تم تحديث كمية الوجبة بنجاح.'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# --- CUSTOMER FULL INVOICE VIEW ---
+@app.route('/api/table/full-invoice/<int:table_id>')
+def api_full_table_invoice(table_id):
+    """Get complete invoice for customer view with all details."""
+    token = request.args.get('token')
+    
+    if not token:
+        return jsonify({'error': 'Token required'}), 400
+    
+    # Verify table token
+    table = db.get_table_by_token(token)
+    if not table or table['id'] != table_id:
+        return jsonify({'error': 'Unauthorized'}), 403
+    
+    invoice_data = db.get_full_table_invoice(table_id)
+    if not invoice_data:
+        return jsonify({'error': 'Table not found'}), 404
+    
+    return jsonify(invoice_data)
 
 @app.route('/api/waiter-call/create', methods=['POST'])
 def api_create_waiter_call():
@@ -769,6 +925,19 @@ def api_get_table_invoice(table_id):
 def api_checkout_table(table_id):
     if not session.get('restaurant_id'):
         return jsonify({'error': 'Unauthorized'}), 401
+    
+    # Check if there are any active orders for this table
+    items = db.get_table_invoice(table_id)
+    if not items or len(items) == 0:
+        # No active orders — just reset the table silently
+        db.set_table_status(table_id, 'available')
+        conn = db.get_db()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE tables SET current_session_id = NULL WHERE id = ?", (table_id,))
+        cursor.execute("UPDATE waiter_calls SET status = 'resolved' WHERE table_id = ? AND status = 'active'", (table_id,))
+        conn.commit()
+        conn.close()
+        return jsonify({'success': True, 'message': 'table_already_empty'})
         
     success = db.checkout_table(table_id)
     return jsonify({'success': success})
