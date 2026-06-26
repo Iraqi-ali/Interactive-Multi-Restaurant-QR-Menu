@@ -222,6 +222,9 @@ def update_settings():
     theme_surface_color = request.form.get('theme_surface_color')
     theme_text_color = request.form.get('theme_text_color')
     currency = request.form.get('currency', 'IQD')
+    phone = request.form.get('phone', '').strip()
+    address = request.form.get('address', '').strip()
+    announcement = request.form.get('announcement', '').strip()
     
     # Handle Logo Upload
     logo_filename = None
@@ -246,6 +249,44 @@ def update_settings():
         else:
             flash("نوع ملف الشعار غير مدعوم.", "error")
             return redirect(url_for('restaurant_dashboard'))
+    
+    # Handle Menu Background Image Upload
+    menu_bg_filename = None
+    menu_bg_file = request.files.get('menu_bg_image')
+    if menu_bg_file and menu_bg_file.filename != '':
+        if allowed_file(menu_bg_file.filename):
+            # Delete old background if exists
+            conn = db.get_db()
+            cursor = conn.cursor()
+            cursor.execute("SELECT menu_bg_image FROM restaurants WHERE id = ?", (restaurant_id,))
+            row = cursor.fetchone()
+            if row and row['menu_bg_image']:
+                try:
+                    os.remove(os.path.join(app.config['UPLOAD_FOLDER'], row['menu_bg_image']))
+                except:
+                    pass
+            conn.close()
+            
+            ext = menu_bg_file.filename.rsplit('.', 1)[1].lower()
+            menu_bg_filename = f"bg_{session['restaurant_slug']}_{uuid.uuid4().hex[:6]}.{ext}"
+            menu_bg_file.save(os.path.join(app.config['UPLOAD_FOLDER'], menu_bg_filename))
+        else:
+            flash("نوع ملف الخلفية غير مدعوم.", "error")
+            return redirect(url_for('restaurant_dashboard'))
+    
+    # Handle Menu Background Image Removal
+    if request.form.get('remove_menu_bg') == '1':
+        conn = db.get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT menu_bg_image FROM restaurants WHERE id = ?", (restaurant_id,))
+        row = cursor.fetchone()
+        if row and row['menu_bg_image']:
+            try:
+                os.remove(os.path.join(app.config['UPLOAD_FOLDER'], row['menu_bg_image']))
+            except:
+                pass
+        conn.close()
+        menu_bg_filename = ''  # Set to empty string to clear it
             
     vat_enabled = 1 if request.form.get('vat_enabled') == 'on' else 0
     vat_percentage_str = request.form.get('vat_percentage', '15.0')
@@ -266,7 +307,11 @@ def update_settings():
             currency,
             vat_enabled,
             vat_percentage,
-            logo_filename
+            logo_filename,
+            phone,
+            address,
+            announcement,
+            menu_bg_filename
         )
         session['restaurant_name'] = name
         flash("تم حفظ إعدادات المظهر والبيانات بنجاح.", "success")

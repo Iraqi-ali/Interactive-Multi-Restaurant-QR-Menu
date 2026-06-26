@@ -266,6 +266,10 @@
         padding-top: 15px;
         background-attachment: fixed;
         background-size: cover;
+        {% if restaurant.menu_bg_image %}
+        background-image: url('{{ url_for('static', filename='uploads/' + restaurant.menu_bg_image) }}') !important;
+        background-position: center !important;
+        {% endif %}
     }
     .main-content {
         padding: 0 15px 100px 15px !important;
@@ -423,6 +427,29 @@
                 <span class="client-status-indicator" style="background: rgba(255, 255, 255, 0.05); color: var(--text-secondary);"><span style="width: 6px; height: 6px; border-radius: 50%; background: var(--text-secondary); display: inline-block;"></span> <span class="lang-txt" data-key="browse_only">تصفح فقط</span></span>
             {% endif %}
         </div>
+    </div>
+    
+    <!-- Announcement Bar -->
+    {% if restaurant.announcement %}
+    <div class="announcement-bar" style="background: var(--accent-gradient); color: #fff; padding: 10px 16px; border-radius: 12px; margin-bottom: 15px; text-align: center; font-weight: bold; font-size: 13px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        📢 {{ restaurant.announcement }}
+    </div>
+    {% endif %}
+    
+    <!-- Contact Info -->
+    <div class="restaurant-contact-info" style="display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; margin-bottom: 15px; font-size: 12px; color: var(--text-secondary);">
+        {% if restaurant.phone %}
+        <span style="display: flex; align-items: center; gap: 5px;">
+            <i class="fa-solid fa-phone" style="color: var(--accent-color);"></i> 
+            <a href="tel:{{ restaurant.phone }}" style="color: var(--text-primary); text-decoration: none; direction: ltr; unicode-bidi: embed;">{{ restaurant.phone }}</a>
+        </span>
+        {% endif %}
+        {% if restaurant.address %}
+        <span style="display: flex; align-items: center; gap: 5px;">
+            <i class="fa-solid fa-location-dot" style="color: var(--accent-color);"></i> 
+            {{ restaurant.address }}
+        </span>
+        {% endif %}
     </div>
     
     <!-- Quick Actions (Call waiter, Request bill) -->

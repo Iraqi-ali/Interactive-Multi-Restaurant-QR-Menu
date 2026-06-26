@@ -40,6 +40,10 @@ def init_db():
         theme_surface_color TEXT DEFAULT '#ffffff',
         theme_text_color TEXT DEFAULT '#1e293b',
         currency TEXT NOT NULL DEFAULT 'IQD',
+        phone TEXT DEFAULT '',
+        address TEXT DEFAULT '',
+        announcement TEXT DEFAULT '',
+        menu_bg_image TEXT DEFAULT '',
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
     )
     ''')
@@ -203,6 +207,22 @@ def init_db():
         pass
     try:
         cursor.execute("ALTER TABLE restaurants ADD COLUMN vat_percentage REAL DEFAULT 15.0")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE restaurants ADD COLUMN phone TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE restaurants ADD COLUMN address TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE restaurants ADD COLUMN announcement TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE restaurants ADD COLUMN menu_bg_image TEXT DEFAULT ''")
     except sqlite3.OperationalError:
         pass
     
@@ -851,21 +871,25 @@ def get_invoice_by_id(invoice_id):
     conn.close()
     return dict(row) if row else None
 
-def update_restaurant_settings(restaurant_id, name, theme_name, primary_color, bg_color, surface_color, text_color, currency, vat_enabled=1, vat_percentage=15.0, logo=None):
+def update_restaurant_settings(restaurant_id, name, theme_name, primary_color, bg_color, surface_color, text_color, currency, vat_enabled=1, vat_percentage=15.0, logo=None, phone='', address='', announcement='', menu_bg_image=None):
     conn = get_db()
     cursor = conn.cursor()
     if logo:
         cursor.execute("""
             UPDATE restaurants 
-            SET name = ?, theme_name = ?, theme_primary_color = ?, theme_bg_color = ?, theme_surface_color = ?, theme_text_color = ?, currency = ?, vat_enabled = ?, vat_percentage = ?, logo = ?
+            SET name = ?, theme_name = ?, theme_primary_color = ?, theme_bg_color = ?, theme_surface_color = ?, theme_text_color = ?, currency = ?, vat_enabled = ?, vat_percentage = ?, logo = ?, phone = ?, address = ?, announcement = ?
             WHERE id = ?
-        """, (name, theme_name, primary_color, bg_color, surface_color, text_color, currency, vat_enabled, vat_percentage, logo, restaurant_id))
+        """, (name, theme_name, primary_color, bg_color, surface_color, text_color, currency, vat_enabled, vat_percentage, logo, phone, address, announcement, restaurant_id))
     else:
         cursor.execute("""
             UPDATE restaurants 
-            SET name = ?, theme_name = ?, theme_primary_color = ?, theme_bg_color = ?, theme_surface_color = ?, theme_text_color = ?, currency = ?, vat_enabled = ?, vat_percentage = ?
+            SET name = ?, theme_name = ?, theme_primary_color = ?, theme_bg_color = ?, theme_surface_color = ?, theme_text_color = ?, currency = ?, vat_enabled = ?, vat_percentage = ?, phone = ?, address = ?, announcement = ?
             WHERE id = ?
-        """, (name, theme_name, primary_color, bg_color, surface_color, text_color, currency, vat_enabled, vat_percentage, restaurant_id))
+        """, (name, theme_name, primary_color, bg_color, surface_color, text_color, currency, vat_enabled, vat_percentage, phone, address, announcement, restaurant_id))
+    
+    if menu_bg_image is not None:
+        cursor.execute("UPDATE restaurants SET menu_bg_image = ? WHERE id = ?", (menu_bg_image, restaurant_id))
+    
     conn.commit()
     conn.close()
 
