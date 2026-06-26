@@ -672,6 +672,71 @@ def checkout_table(table_id):
     finally:
         conn.close()
 
+def archive_takeaway_order(order_id):
+    """Archive a single takeaway order as an invoice (since there's no table checkout for سفري)."""
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        # Get order details
+        cursor.execute("""
+            SELECT o.*, t.table_number, t.id as table_id 
+            FROM orders o 
+            JOIN tables t ON o.table_id = t.id 
+            WHERE o.id = ?
+        """, (order_id,))
+        order = cursor.fetchone()
+        
+        if not order:
+            return False
+        
+        # Fetch items for this order
+        cursor.execute("""
+            SELECT m.name as item_name, oi.quantity, oi.price, (oi.quantity * oi.price) as item_total
+            FROM order_items oi
+            JOIN menu_items m ON oi.menu_item_id = m.id
+            WHERE oi.order_id = ?
+        """, (order_id,))
+        items_rows = cursor.fetchall()
+        
+        if items_rows:
+            subtotal = sum(item['item_total'] for item in items_rows)
+            
+            # Fetch VAT settings
+            cursor.execute("SELECT vat_enabled, vat_percentage, currency FROM restaurants WHERE id = ?", (order['restaurant_id'],))
+            rest = cursor.fetchone()
+            vat_enabled = rest['vat_enabled'] if rest else 1
+            vat_percentage = rest['vat_percentage'] if rest else 15.0
+            currency = rest['currency'] if rest else 'IQD'
+            
+            vat_amount = subtotal * (vat_percentage / 100.0) if vat_enabled == 1 else 0.0
+            total_amount = subtotal + vat_amount
+            
+            items_list = []
+            for item in items_rows:
+                items_list.append({
+                    'name': item['item_name'],
+                    'quantity': item['quantity'],
+                    'price': item['price'],
+                    'total': item['item_total']
+                })
+            import json
+            items_json = json.dumps(items_list, ensure_ascii=False)
+            
+            cursor.execute("""
+                INSERT INTO invoices (restaurant_id, table_id, table_number, session_id, subtotal, vat_rate, vat_amount, total_amount, currency, items_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (order['restaurant_id'], order['table_id'], order['table_number'], 
+                  order['session_id'] or '', subtotal, vat_percentage if vat_enabled else 0.0, 
+                  vat_amount, total_amount, currency, items_json))
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
 def get_sales_analytics(restaurant_id):
     conn = get_db()
     cursor = conn.cursor()

@@ -581,7 +581,24 @@ def api_update_order_status(order_id):
     password = data.get('password')
     
     if status == 'paid':
-        return jsonify({'error': 'manual_paid_forbidden', 'message': 'لا يمكن تغيير حالة الطلب إلى مدفوع يدوياً. يرجى تصفية حساب الطاولة بالكامل من قسم الطاولات.'}), 400
+        # Check if this is a takeaway order - allow direct paid status for سفري orders
+        conn = db.get_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT order_type, restaurant_id FROM orders WHERE id = ?", (order_id,))
+        order_check = cursor.fetchone()
+        conn.close()
+        
+        if order_check and order_check['order_type'] == 'take_away':
+            # Allow direct paid for takeaway orders, but verify restaurant ownership
+            if order_check['restaurant_id'] != session.get('restaurant_id'):
+                return jsonify({'error': 'Unauthorized'}), 401
+            # Archive this order as an invoice before marking paid
+            try:
+                db.archive_takeaway_order(order_id)
+            except Exception as e:
+                return jsonify({'error': 'archive_failed', 'message': str(e)}), 500
+        else:
+            return jsonify({'error': 'manual_paid_forbidden', 'message': 'لا يمكن تغيير حالة الطلب إلى مدفوع يدوياً. يرجى تصفية حساب الطاولة بالكامل من قسم الطاولات.'}), 400
         
     if status == 'cancelled':
         # Check current status of the order
