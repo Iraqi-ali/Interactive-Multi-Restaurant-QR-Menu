@@ -64,11 +64,22 @@
     </main>
 
     <footer class="main-footer">
-        <p>&copy; 2026 كيوآر منيو. جميع الحقوق محفوظة لـ سكربت للحلول الرقمية.</p>
+        <div class="footer-content">
+            <div class="footer-brand">
+                <span class="footer-logo-text">سكربت <span class="footer-logo-highlight">الحلول الرقمية</span></span>
+            </div>
+            <div class="footer-copyright">
+                <p>&copy; <span id="current-year">2026</span> جميع الحقوق محفوظة.</p>
+                <p class="footer-powered">مُشغّل بواسطة <strong>سكربت الحلول الرقمية</strong> لنظام إدارة المطاعم الذكي</p>
+            </div>
+        </div>
     </footer>
 
     {% block extra_js %}{% endblock %}
     <script>
+        // Update copyright year automatically
+        document.getElementById('current-year').textContent = new Date().getFullYear();
+        
         // Auto-dismiss flash messages after 4 seconds
         setTimeout(() => {
             const flashes = document.querySelectorAll('.flash-message');

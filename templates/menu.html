@@ -512,6 +512,13 @@
         {% endfor %}
     </div>
     
+    <!-- Subtle copyright for customer menu -->
+    <div class="customer-copyright" style="text-align: center; padding: 25px 10px 90px 10px; font-size: 10px; color: var(--text-secondary); opacity: 0.6;">
+        <span>مُشغّل بواسطة <strong style="color: var(--accent-color);">سكربت الحلول الرقمية</strong></span>
+        <span style="margin: 0 6px;">•</span>
+        <span>&copy; <span class="copy-year">2026</span> جميع الحقوق محفوظة</span>
+    </div>
+    
 </div>
 
 <!-- Floating Cart Footer -->
@@ -870,6 +877,11 @@
         
         // Initialize order type
         setOrderType(currentOrderType);
+        
+        // Update copyright year
+        document.querySelectorAll('.copy-year').forEach(el => {
+            el.textContent = new Date().getFullYear();
+        });
         
         const savedCart = localStorage.getItem(`cart_${restaurantId}_${tableId}`);
         if (savedCart) {
