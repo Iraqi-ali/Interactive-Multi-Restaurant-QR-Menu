@@ -1239,23 +1239,6 @@
     </div>
 </div>
 
-<!-- CONFIRMATION MODAL -->
-<div id="confirm-modal" class="modal">
-    <div class="modal-content win11-window" style="max-width: 380px; padding: 0;">
-        <div class="win11-window-header">
-            <div class="win11-window-title"><i class="fa-solid fa-circle-question"></i> تأكيد العملية</div>
-            <button class="modal-close" onclick="rejectConfirm()" style="position: static; font-size: 20px; color: var(--text-secondary); background: none; border: none; cursor: pointer;">&times;</button>
-        </div>
-        <div class="win11-window-body" style="padding: 20px; text-align: center;">
-            <p id="confirm-message" style="margin-bottom: 20px; color: var(--text-primary); font-size: 15px;">هل أنت متأكد؟</p>
-            <div style="display: flex; gap: 10px;">
-                <button class="btn btn-danger" style="flex: 1; border-radius: 6px;" onclick="acceptConfirm()"><i class="fa-solid fa-check"></i> نعم، تأكيد</button>
-                <button class="btn btn-secondary" style="flex: 1; border-radius: 6px;" onclick="rejectConfirm()">إلغاء</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 {% endblock %}
 
 {% block extra_js %}
@@ -1918,10 +1901,9 @@
         pollDashboardData();
     }
     
-    // Delete with confirmation (called from trash button) - uses custom modal
+    // Delete with confirmation (called from trash button)
     async function deleteOrderItem(itemId, orderId, orderStatus) {
-        const confirmed = await promptConfirm('هل أنت متأكد من حذف هذه الوجبة من الطلب؟');
-        if (!confirmed) return;
+        if (!confirm('هل أنت متأكد من حذف هذه الوجبة من الطلب؟')) return;
         return deleteOrderItemDirect(itemId, orderId, orderStatus);
     }
     
@@ -1949,31 +1931,6 @@
         if (window._pwdResolve) {
             window._pwdResolve(null);
             window._pwdResolve = null;
-        }
-    }
-    
-    // Custom confirmation modal (replaces browser confirm())
-    function promptConfirm(message) {
-        return new Promise((resolve) => {
-            document.getElementById('confirm-message').innerText = message || 'هل أنت متأكد؟';
-            document.getElementById('confirm-modal').style.display = 'flex';
-            window._confirmResolve = resolve;
-        });
-    }
-    
-    function acceptConfirm() {
-        document.getElementById('confirm-modal').style.display = 'none';
-        if (window._confirmResolve) {
-            window._confirmResolve(true);
-            window._confirmResolve = null;
-        }
-    }
-    
-    function rejectConfirm() {
-        document.getElementById('confirm-modal').style.display = 'none';
-        if (window._confirmResolve) {
-            window._confirmResolve(false);
-            window._confirmResolve = null;
         }
     }
 
